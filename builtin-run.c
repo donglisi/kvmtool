@@ -618,17 +618,7 @@ static struct kvm *kvm_cmd_run_init(int argc, const char **argv)
 	else
 		pr_warning("No console!");
 
-	if (!kvm->cfg.host_ip)
-		kvm->cfg.host_ip = DEFAULT_HOST_ADDR;
-
-	if (!kvm->cfg.guest_ip)
-		kvm->cfg.guest_ip = DEFAULT_GUEST_ADDR;
-
-	if (!kvm->cfg.guest_mac)
-		kvm->cfg.guest_mac = DEFAULT_GUEST_MAC;
-
-	if (!kvm->cfg.host_mac)
-		kvm->cfg.host_mac = DEFAULT_HOST_MAC;
+	kvm->cfg.guest_mac = mac_addr_guest;
 
 	if (!kvm->cfg.script)
 		kvm->cfg.script = DEFAULT_SCRIPT;

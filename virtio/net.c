@@ -890,14 +890,12 @@ int netdev_parser(const struct option *opt, const char *arg, int unset)
 	}
 
 	p = (struct virtio_net_params) {
-		.guest_ip	= DEFAULT_GUEST_ADDR,
-		.host_ip	= DEFAULT_HOST_ADDR,
 		.script		= DEFAULT_SCRIPT,
 		.downscript	= DEFAULT_SCRIPT,
 		.mode		= NET_MODE_TAP,
 	};
 
-	str_to_mac(DEFAULT_GUEST_MAC, p.guest_mac);
+	str_to_mac(mac_addr_guest, p.guest_mac);
 	p.guest_mac[5] += kvm->cfg.num_net_devices;
 
 	while (cur) {

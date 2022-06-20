@@ -8,15 +8,13 @@
 #define DEFAULT_KVM_DEV		"/dev/kvm"
 #define DEFAULT_CONSOLE		"serial"
 #define DEFAULT_NETWORK		"user"
-#define DEFAULT_HOST_ADDR	"192.168.33.1"
-#define DEFAULT_GUEST_ADDR	"192.168.33.15"
-#define DEFAULT_GUEST_MAC	"02:15:15:15:15:15"
-#define DEFAULT_HOST_MAC	"02:01:01:01:01:01"
-#define DEFAULT_SCRIPT		"none"
+#define DEFAULT_SCRIPT         "/etc/qemu-ifup"
 #define DEFAULT_SANDBOX_FILENAME "guest/sandbox.sh"
 
 #define MIN_RAM_SIZE_MB		(64ULL)
 #define MIN_RAM_SIZE_BYTE	(MIN_RAM_SIZE_MB << MB_SHIFT)
+
+extern char mac_addr_guest[];
 
 struct kvm_config {
 	struct kvm_config_arch arch;

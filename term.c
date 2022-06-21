@@ -24,7 +24,7 @@ static int term_fds[TERM_MAX_DEVS][2];
 static pthread_t term_poll_thread;
 
 /* ctrl-a is used for escape */
-#define term_escape_char	0x01
+#define term_escape_char	0x07
 
 int term_getc(struct kvm *kvm, int term)
 {

@@ -49,6 +49,7 @@ OBJS	+= $(BUILD)/util/strbuf.o
 OBJS	+= $(BUILD)/util/read-write.o
 OBJS	+= $(BUILD)/util/util.o
 OBJS	+= $(BUILD)/x86/boot.o
+OBJS	+= $(BUILD)/x86/irq.o
 OBJS	+= $(BUILD)/x86/cpuid.o
 OBJS	+= $(BUILD)/x86/mptable.o
 OBJS	+= $(BUILD)/x86/interrupt.o

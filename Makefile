@@ -3,7 +3,7 @@ DEFINES	+= -DKVMTOOLS_VERSION='"1.0"'
 DEFINES	+= -DBUILD_ARCH='"x86"'
 
 CC	:= gcc
-CFLAGS	:= -Iinclude -Ix86/include $(DEFINES) -w
+CFLAGS	:= -nostdinc -I/usr/x86_64-linux-musl/include/ -Iinclude -Ix86/include $(DEFINES)
 
 PROGRAM	:= lkvm
 BUILD	:= build
@@ -84,7 +84,10 @@ $(BUILD)/%.o: %.c
 all: $(PROGRAM)
 
 $(PROGRAM): $(OBJS)
-	$(CC) $^ -o $@
+	$(CC) -nostdlib -L/usr/x86_64-linux-musl/lib64 -lc -lpthread \
+		-Wl,-rpath /usr/x86_64-linux-musl/lib64/ \
+		-Wl,-dynamic-linker /lib/ld-musl-x86_64.so.1 \
+		/usr/x86_64-linux-musl/lib64/crt1.o $^ -o $@
 
 x86/bios/bios.bin.elf:
 	$(CC) $(CFLAGS) -m16 -c x86/bios/e820.c -o $(BUILD)/x86/bios/e820.o

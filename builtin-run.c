@@ -74,10 +74,6 @@ static int img_name_parser(const struct option *opt, const char *arg, int unset)
 	struct stat st;
 
 	snprintf(path, PATH_MAX, "%s%s", kvm__get_dir(), arg);
-
-	if ((stat(arg, &st) == 0 && S_ISDIR(st.st_mode)) ||
-	   (stat(path, &st) == 0 && S_ISDIR(st.st_mode)))
-		return virtio_9p_img_name_parser(opt, arg, unset);
 	return disk_img_name_parser(opt, arg, unset);
 }
 
@@ -111,9 +107,6 @@ void kvm_run_set_wrapper_sandbox(void)
 	OPT_BOOLEAN('\0', "nodefaults", &(cfg)->nodefaults, "Disable"   \
 			" implicit configuration that cannot be"	\
 			" disabled otherwise"),				\
-	OPT_CALLBACK('\0', "9p", NULL, "dir_to_share,tag_name",		\
-		     "Enable virtio 9p to share files between host and"	\
-		     " guest", virtio_9p_rootdir_parser, kvm),		\
 	OPT_STRING('\0', "console", &(cfg)->console, "serial, virtio or"\
 			" hv", "Console to use"),			\
 	OPT_U64('\0', "vsock", &(cfg)->vsock_cid,			\
@@ -147,11 +140,6 @@ void kvm_run_set_wrapper_sandbox(void)
 		     netdev_parser, NULL, kvm),				\
 	OPT_BOOLEAN('\0', "no-dhcp", &(cfg)->no_dhcp, "Disable kernel"	\
 			" DHCP in rootfs mode"),			\
-									\
-	OPT_GROUP("VFIO options:"),					\
-	OPT_CALLBACK('\0', "vfio-pci", NULL, "[domain:]bus:dev.fn",	\
-		     "Assign a PCI device to the virtual machine",	\
-		     vfio_device_parser, kvm),				\
 									\
 	OPT_GROUP("Debug options:"),					\
 	OPT_BOOLEAN('\0', "debug", &do_debug_print,			\
@@ -341,67 +329,6 @@ static const char *find_vmlinux(void)
 	return NULL;
 }
 
-void kvm_run_help(void)
-{
-	struct kvm *kvm = NULL;
-
-	BUILD_OPTIONS(options, &kvm->cfg, kvm);
-	usage_with_options(run_usage, options);
-}
-
-static int kvm_run_set_sandbox(struct kvm *kvm)
-{
-	const char *guestfs_name = kvm->cfg.custom_rootfs_name;
-	char path[PATH_MAX], script[PATH_MAX], *tmp;
-
-	snprintf(path, PATH_MAX, "%s%s/virt/sandbox.sh", kvm__get_dir(), guestfs_name);
-
-	remove(path);
-
-	if (kvm->cfg.sandbox == NULL)
-		return 0;
-
-	tmp = realpath(kvm->cfg.sandbox, NULL);
-	if (tmp == NULL)
-		return -ENOMEM;
-
-	snprintf(script, PATH_MAX, "/host/%s", tmp);
-	free(tmp);
-
-	return symlink(script, path);
-}
-
-static void kvm_write_sandbox_cmd_exactly(int fd, const char *arg)
-{
-	const char *single_quote;
-
-	if (!*arg) { /* zero length string */
-		if (write(fd, "''", 2) <= 0)
-			die("Failed writing sandbox script");
-		return;
-	}
-
-	while (*arg) {
-		single_quote = strchrnul(arg, '\'');
-
-		/* write non-single-quote string as #('string') */
-		if (arg != single_quote) {
-			if (write(fd, "'", 1) <= 0 ||
-			    write(fd, arg, single_quote - arg) <= 0 ||
-			    write(fd, "'", 1) <= 0)
-				die("Failed writing sandbox script");
-		}
-
-		/* write single quote as #("'") */
-		if (*single_quote) {
-			if (write(fd, "\"'\"", 3) <= 0)
-				die("Failed writing sandbox script");
-		} else
-			break;
-
-		arg = single_quote + 1;
-	}
-}
 
 static void resolve_program(const char *src, char *dst, size_t len)
 {
@@ -421,41 +348,6 @@ static void resolve_program(const char *src, char *dst, size_t len)
 
 	} else
 		strlcpy(dst, src, len);
-}
-
-static void kvm_run_write_sandbox_cmd(struct kvm *kvm, const char **argv, int argc)
-{
-	const char script_hdr[] = "#! /bin/bash\n\n";
-	char program[PATH_MAX];
-	int fd;
-
-	remove(kvm->cfg.sandbox);
-
-	fd = open(kvm->cfg.sandbox, O_RDWR | O_CREAT, 0777);
-	if (fd < 0)
-		die("Failed creating sandbox script");
-
-	if (write(fd, script_hdr, sizeof(script_hdr) - 1) <= 0)
-		die("Failed writing sandbox script");
-
-	resolve_program(argv[0], program, PATH_MAX);
-	kvm_write_sandbox_cmd_exactly(fd, program);
-
-	argv++;
-	argc--;
-
-	while (argc) {
-		if (write(fd, " ", 1) <= 0)
-			die("Failed writing sandbox script");
-
-		kvm_write_sandbox_cmd_exactly(fd, argv[0]);
-		argv++;
-		argc--;
-	}
-	if (write(fd, "\n", 1) <= 0)
-		die("Failed writing sandbox script");
-
-	close(fd);
 }
 
 static void kvm_run_set_real_cmdline(struct kvm *kvm)
@@ -537,15 +429,6 @@ static struct kvm *kvm_cmd_run_init(int argc, const char **argv)
 				PARSE_OPT_STOP_AT_NON_OPTION |
 				PARSE_OPT_KEEP_DASHDASH);
 		if (argc != 0) {
-			/* Cusrom options, should have been handled elsewhere */
-			if (strcmp(argv[0], "--") == 0) {
-				if (kvm_run_wrapper == KVM_RUN_SANDBOX) {
-					kvm->cfg.sandbox = DEFAULT_SANDBOX_FILENAME;
-					kvm_run_write_sandbox_cmd(kvm, argv+1, argc-1);
-					break;
-				}
-			}
-
 			if ((kvm_run_wrapper == KVM_RUN_DEFAULT && kvm->cfg.kernel_filename) ||
 				(kvm_run_wrapper == KVM_RUN_SANDBOX && kvm->cfg.sandbox)) {
 				fprintf(stderr, "Cannot handle parameter: "
@@ -554,20 +437,7 @@ static struct kvm *kvm_cmd_run_init(int argc, const char **argv)
 				free(kvm);
 				return ERR_PTR(-EINVAL);
 			}
-			if (kvm_run_wrapper == KVM_RUN_SANDBOX) {
-				/*
-				 * first unhandled parameter is treated as
-				 * sandbox command
-				 */
-				kvm->cfg.sandbox = DEFAULT_SANDBOX_FILENAME;
-				kvm_run_write_sandbox_cmd(kvm, argv, argc);
-			} else {
-				/*
-				 * first unhandled parameter is treated as a kernel
-				 * image
-				 */
-				kvm->cfg.kernel_filename = argv[0];
-			}
+			kvm->cfg.kernel_filename = argv[0];
 			argv++;
 			argc--;
 		}
@@ -635,29 +505,6 @@ static struct kvm *kvm_cmd_run_init(int argc, const char **argv)
 		}
 	}
 
-	if (!kvm->cfg.nodefaults &&
-	    !kvm->cfg.using_rootfs &&
-	    !kvm->cfg.disk_image[0].filename &&
-	    !kvm->cfg.initrd_filename) {
-		char tmp[PATH_MAX];
-
-		kvm_setup_create_new(kvm->cfg.custom_rootfs_name);
-		kvm_setup_resolv(kvm->cfg.custom_rootfs_name);
-
-		snprintf(tmp, PATH_MAX, "%s%s", kvm__get_dir(), "default");
-		if (virtio_9p__register(kvm, tmp, "/dev/root") < 0)
-			die("Unable to initialize virtio 9p");
-		if (virtio_9p__register(kvm, "/", "hostfs") < 0)
-			die("Unable to initialize virtio 9p");
-		kvm->cfg.using_rootfs = kvm->cfg.custom_rootfs = 1;
-	}
-
-	if (kvm->cfg.custom_rootfs) {
-		kvm_run_set_sandbox(kvm);
-		if (kvm_setup_guest_init(kvm->cfg.custom_rootfs_name))
-			die("Failed to setup init for guest.");
-	}
-
 	if (kvm->cfg.nodefaults)
 		kvm->cfg.real_cmdline = kvm->cfg.kernel_cmdline;
 	else
@@ -699,8 +546,6 @@ static int kvm_cmd_run_work(struct kvm *kvm)
 
 static void kvm_cmd_run_exit(struct kvm *kvm, int guest_ret)
 {
-	compat__print_all_messages();
-
 	init_list__exit(kvm);
 
 	if (guest_ret == 0)

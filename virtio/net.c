@@ -607,8 +607,6 @@ static int init_vq(struct kvm *kvm, void *dev, u32 vq)
 	struct virt_queue *queue;
 	int r;
 
-	compat__remove_message(compat_id);
-
 	net_queue	= &ndev->queues[vq];
 	net_queue->id	= vq;
 	net_queue->ndev	= ndev;
@@ -988,9 +986,6 @@ static int virtio_net__init_one(struct virtio_net_params *params)
 
 	if (params->vhost)
 		virtio_net__vhost_init(params->kvm, ndev);
-
-	if (compat_id == -1)
-		compat_id = virtio_compat_add_message("virtio-net", "CONFIG_VIRTIO_NET");
 
 	return 0;
 }

@@ -217,8 +217,6 @@ static int init_vq(struct kvm *kvm, void *dev, u32 vq)
 	unsigned int i;
 	struct blk_dev *bdev = dev;
 
-	compat__remove_message(compat_id);
-
 	virtio_init_device_vq(kvm, &bdev->vdev, &bdev->vqs[vq],
 			      VIRTIO_BLK_QUEUE_SIZE);
 
@@ -335,9 +333,6 @@ static int virtio_blk__init_one(struct kvm *kvm, struct disk_image *disk)
 		return r;
 
 	disk_image__set_callback(bdev->disk, virtio_blk_complete);
-
-	if (compat_id == -1)
-		compat_id = virtio_compat_add_message("virtio-blk", "CONFIG_VIRTIO_BLK");
 
 	return 0;
 }

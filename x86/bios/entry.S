@@ -10,8 +10,6 @@
 
 #define EFLAGS_CF	(1 << 0)
 
-#include "macro.S"
-
 /* If you change these macros, remember to update 'struct biosregs' */
 .macro SAVE_BIOSREGS
 	pushl	%fs
@@ -55,25 +53,6 @@ ENTRY(bios_intfake)
 	IRET
 ENTRY_END(bios_intfake)
 
-/*
- * int 10 - video - service
- */
-ENTRY(bios_int10)
-	SAVE_BIOSREGS
-
-	movl		%esp, %eax
-	/* this is way easier than doing it in assembly */
-	/* just push all the regs and jump to a C handler */
-	call	int10_handler
-
-	RESTORE_BIOSREGS
-
-	/* Clear CF to indicate success.  */
-	andl	$~EFLAGS_CF, 0x4(%esp)
-
-	IRET
-ENTRY_END(bios_int10)
-
 ENTRY(bios_int15)
 	SAVE_BIOSREGS
 
@@ -84,12 +63,6 @@ ENTRY(bios_int15)
 
 	IRET
 ENTRY_END(bios_int15)
-
-GLOBAL(__locals)
-
-#include "local.S"
-
-END(__locals)
 
 /*
  * Add this section to ensure final binary has a non-executable stack.

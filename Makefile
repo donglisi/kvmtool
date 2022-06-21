@@ -1,3 +1,4 @@
+DEFINES	:=
 DEFINES	+= -D_GNU_SOURCE
 DEFINES	+= -DKVMTOOLS_VERSION='"1.0"'
 DEFINES	+= -DBUILD_ARCH='"x86"'
@@ -11,39 +12,22 @@ BUILD	:= build
 OBJS	:=
 OBJS	+= $(BUILD)/devices.o
 OBJS	+= $(BUILD)/disk/core.o
-OBJS	+= $(BUILD)/disk/qcow.o
 OBJS	+= $(BUILD)/hw/serial.o
 OBJS	+= $(BUILD)/hw/rtc.o
 OBJS	+= $(BUILD)/irq.o
 OBJS	+= $(BUILD)/kvm-cpu.o
 OBJS	+= $(BUILD)/kvm.o
-OBJS	+= $(BUILD)/kvm-ipc.o
 OBJS	+= $(BUILD)/main.o
-OBJS	+= $(BUILD)/builtin-balloon.o
-OBJS	+= $(BUILD)/builtin-debug.o
-OBJS	+= $(BUILD)/builtin-help.o
-OBJS	+= $(BUILD)/builtin-list.o
-OBJS	+= $(BUILD)/builtin-stat.o
-OBJS	+= $(BUILD)/builtin-pause.o
-OBJS	+= $(BUILD)/builtin-resume.o
 OBJS	+= $(BUILD)/builtin-run.o
-OBJS	+= $(BUILD)/builtin-setup.o
-OBJS	+= $(BUILD)/builtin-stop.o
-OBJS	+= $(BUILD)/builtin-version.o
-OBJS	+= $(BUILD)/builtin-sandbox.o
 OBJS	+= $(BUILD)/kvm-cmd.o
 OBJS	+= $(BUILD)/mmio.o
 OBJS	+= $(BUILD)/pci.o
 OBJS	+= $(BUILD)/term.o
-OBJS	+= $(BUILD)/guest_compat.o
 OBJS	+= $(BUILD)/virtio/blk.o
 OBJS	+= $(BUILD)/virtio/core.o
 OBJS	+= $(BUILD)/virtio/net.o
 OBJS	+= $(BUILD)/virtio/mmio.o
 OBJS	+= $(BUILD)/virtio/pci.o
-OBJS	+= $(BUILD)/virtio/9p.o
-OBJS	+= $(BUILD)/virtio/9p-pdu.o
-OBJS	+= $(BUILD)/virtio/console.o
 OBJS	+= $(BUILD)/disk/blk.o
 OBJS	+= $(BUILD)/disk/raw.o
 OBJS	+= $(BUILD)/ioeventfd.o
@@ -57,7 +41,6 @@ OBJS	+= $(BUILD)/net/uip/buf.o
 OBJS	+= $(BUILD)/net/uip/csum.o
 OBJS	+= $(BUILD)/net/uip/dhcp.o
 OBJS	+= $(BUILD)/util/init.o
-OBJS	+= $(BUILD)/util/threadpool.o
 OBJS	+= $(BUILD)/util/parse-options.o
 OBJS	+= $(BUILD)/util/iovec.o
 OBJS	+= $(BUILD)/util/rbtree.o
@@ -65,10 +48,7 @@ OBJS	+= $(BUILD)/util/rbtree-interval.o
 OBJS	+= $(BUILD)/util/strbuf.o
 OBJS	+= $(BUILD)/util/read-write.o
 OBJS	+= $(BUILD)/util/util.o
-OBJS	+= $(BUILD)/vfio/core.o
-OBJS	+= $(BUILD)/vfio/pci.o
 OBJS	+= $(BUILD)/x86/boot.o
-OBJS	+= $(BUILD)/x86/ioport.o
 OBJS	+= $(BUILD)/x86/cpuid.o
 OBJS	+= $(BUILD)/x86/mptable.o
 OBJS	+= $(BUILD)/x86/interrupt.o
@@ -91,12 +71,10 @@ $(PROGRAM): $(OBJS)
 
 x86/bios/bios.bin.elf:
 	$(CC) $(CFLAGS) -m16 -c x86/bios/e820.c -o $(BUILD)/x86/bios/e820.o
-	$(CC) $(CFLAGS) -m16 -c x86/bios/memcpy.c -o $(BUILD)/x86/bios/memcpy.o
-	$(CC) $(CFLAGS) -m16 -c x86/bios/int10.c -o $(BUILD)/x86/bios/int10.o
 	$(CC) $(CFLAGS) -m16 -c x86/bios/int15.c -o $(BUILD)/x86/bios/int15.o
 	$(CC) $(CFLAGS) -m16 -c x86/bios/entry.S -o $(BUILD)/x86/bios/entry.o
-	ld -T x86/bios/rom.ld.S -o $@ $(BUILD)/x86/bios/e820.o $(BUILD)/x86/bios/memcpy.o \
-		$(BUILD)/x86/bios/int10.o $(BUILD)/x86/bios/int15.o $(BUILD)/x86/bios/entry.o
+	ld -T x86/bios/rom.ld.S -o $@ $(BUILD)/x86/bios/e820.o \
+		$(BUILD)/x86/bios/int15.o $(BUILD)/x86/bios/entry.o
 
 x86/bios/bios.bin: x86/bios/bios.bin.elf
 	objcopy -O binary -j .text $< $@

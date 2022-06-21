@@ -121,14 +121,6 @@ static struct disk_image *disk_image__open(const char *filename, bool readonly, 
 	if (fd < 0)
 		return ERR_PTR(fd);
 
-	/* qcow image ?*/
-	disk = qcow_probe(fd, true);
-	if (!IS_ERR_OR_NULL(disk)) {
-		pr_warning("Forcing read-only support for QCOW");
-		disk->readonly = true;
-		return disk;
-	}
-
 	/* raw image ?*/
 	disk = raw_image__probe(fd, &st, readonly);
 	if (!IS_ERR_OR_NULL(disk)) {

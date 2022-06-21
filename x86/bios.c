@@ -28,7 +28,6 @@ struct irq_handler {
 	}
 
 static struct irq_handler bios_irq_handlers[] = {
-	DEFINE_BIOS_IRQ_HANDLER(0x10, bios_int10),
 	DEFINE_BIOS_IRQ_HANDLER(0x15, bios_int15),
 };
 

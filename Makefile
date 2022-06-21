@@ -71,6 +71,7 @@ $(PROGRAM): $(OBJS)
 		-Wl,-rpath /usr/x86_64-linux-musl/lib64/ \
 		-Wl,-dynamic-linker /lib/ld-musl-x86_64.so.1 \
 		/usr/x86_64-linux-musl/lib64/crt1.o $^ -o $@
+	ld /usr/x86_64-linux-musl/lib64/crt1.o $^ /usr/x86_64-linux-musl/lib64/libc.a -o vm
 
 x86/bios/bios.bin.elf:
 	$(CC) $(CFLAGS) -m16 -c x86/bios/e820.c -o $(BUILD)/x86/bios/e820.o
@@ -92,5 +93,5 @@ $(BUILD)/x86/bios/bios-rom.o: x86/bios/bios.bin
 
 clean:
 	rm -f x86/bios/{bios.bin.elf,bios.bin,bios-rom.h}
-	rm -rf build lkvm
+	rm -rf build lkvm vm
 .PHONY: clean

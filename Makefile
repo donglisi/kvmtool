@@ -6,7 +6,6 @@ DEFINES	+= -DBUILD_ARCH='"x86"'
 CC	:= gcc
 CFLAGS	:= -nostdinc -I/usr/x86_64-linux-musl/include/ -Iinclude -Ix86/include $(DEFINES)
 
-PROGRAM	:= lkvm
 BUILD	:= build
 
 OBJS	:=
@@ -64,14 +63,16 @@ $(BUILD)/%.o: %.c
 	@ mkdir -p build/{x86/bios,net/uip,util,disk,virtio,hw,vfio}
 	$(CC) -c $(CFLAGS) $< -o $@
 
-all: $(PROGRAM)
+all: lkvm lkvm-s
 
-$(PROGRAM): $(OBJS)
-	$(CC) -nostdlib -L/usr/x86_64-linux-musl/lib64 -lc -lpthread \
-		-Wl,-rpath /usr/x86_64-linux-musl/lib64/ \
-		-Wl,-dynamic-linker /lib/ld-musl-x86_64.so.1 \
+lkvm: $(OBJS)
+	ld -nostdlib -L/usr/x86_64-linux-musl/lib64 -lc -lpthread \
+		-rpath /usr/x86_64-linux-musl/lib64/ \
+		-dynamic-linker /lib/ld-musl-x86_64.so.1 \
 		/usr/x86_64-linux-musl/lib64/crt1.o $^ -o $@
-	ld /usr/x86_64-linux-musl/lib64/crt1.o $^ /usr/x86_64-linux-musl/lib64/libc.a -o vm
+
+lkvm-s: $(OBJS)
+	ld /usr/x86_64-linux-musl/lib64/crt1.o $^ /usr/x86_64-linux-musl/lib64/libc.a -o $@
 
 x86/bios/bios.bin.elf:
 	$(CC) $(CFLAGS) -m16 -c x86/bios/e820.c -o $(BUILD)/x86/bios/e820.o
@@ -93,5 +94,5 @@ $(BUILD)/x86/bios/bios-rom.o: x86/bios/bios.bin
 
 clean:
 	rm -f x86/bios/{bios.bin.elf,bios.bin,bios-rom.h}
-	rm -rf build lkvm vm
+	rm -rf build lkvm lkvm-s
 .PHONY: clean

@@ -195,45 +195,12 @@ static const char *host_kernels[] = {
 	NULL
 };
 
-static const char *default_kernels[] = {
-	"./bzImage",
-	"arch/" BUILD_ARCH "/boot/bzImage",
-	"../../arch/" BUILD_ARCH "/boot/bzImage",
-	NULL
-};
-
 static const char *default_vmlinux[] = {
 	"vmlinux",
 	"../../../vmlinux",
 	"../../vmlinux",
 	NULL
 };
-
-static void kernel_usage_with_options(void)
-{
-	const char **k;
-	struct utsname uts;
-
-	fprintf(stderr, "Fatal: could not find default kernel image in:\n");
-	k = &default_kernels[0];
-	while (*k) {
-		fprintf(stderr, "\t%s\n", *k);
-		k++;
-	}
-
-	if (uname(&uts) < 0)
-		return;
-
-	k = &host_kernels[0];
-	while (*k) {
-		if (snprintf(kernel, PATH_MAX, "%s-%s", *k, uts.release) < 0)
-			return;
-		fprintf(stderr, "\t%s\n", kernel);
-		k++;
-	}
-	fprintf(stderr, "\nPlease see '%s run --help' for more options.\n\n",
-		KVM_BINARY_NAME);
-}
 
 static u64 host_ram_size(void)
 {
@@ -276,40 +243,6 @@ static u64 get_ram_size(int nr_cpus)
 		ram_size	= available;
 
 	return ram_size;
-}
-
-static const char *find_kernel(void)
-{
-	const char **k;
-	struct stat st;
-	struct utsname uts;
-
-	k = &default_kernels[0];
-	while (*k) {
-		if (stat(*k, &st) < 0 || !S_ISREG(st.st_mode)) {
-			k++;
-			continue;
-		}
-		strlcpy(kernel, *k, PATH_MAX);
-		return kernel;
-	}
-
-	if (uname(&uts) < 0)
-		return NULL;
-
-	k = &host_kernels[0];
-	while (*k) {
-		if (snprintf(kernel, PATH_MAX, "%s-%s", *k, uts.release) < 0)
-			return NULL;
-
-		if (stat(kernel, &st) < 0 || !S_ISREG(st.st_mode)) {
-			k++;
-			continue;
-		}
-		return kernel;
-
-	}
-	return NULL;
 }
 
 static const char *find_vmlinux(void)
@@ -445,15 +378,6 @@ static struct kvm *kvm_cmd_run_init(int argc, const char **argv)
 	}
 
 	kvm_run_validate_cfg(kvm);
-
-	if (!kvm->cfg.kernel_filename && !kvm->cfg.firmware_filename) {
-		kvm->cfg.kernel_filename = find_kernel();
-
-		if (!kvm->cfg.kernel_filename) {
-			kernel_usage_with_options();
-			return ERR_PTR(-EINVAL);
-		}
-	}
 
 	if (kvm->cfg.kernel_filename) {
 		kvm->cfg.vmlinux_filename = find_vmlinux();

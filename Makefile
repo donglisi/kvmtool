@@ -1,7 +1,4 @@
-DEFINES	:=
-DEFINES	+= -D_GNU_SOURCE
-DEFINES	+= -DKVMTOOLS_VERSION='"1.0"'
-DEFINES	+= -DBUILD_ARCH='"x86"'
+DEFINES	:= -D_GNU_SOURCE
 
 CC	:= gcc
 CFLAGS	:= -nostdinc -I/usr/x86_64-linux-musl/include/ -Iinclude -Ix86/include $(DEFINES)

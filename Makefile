@@ -68,9 +68,11 @@ lkvm: $(OBJS)
 		-rpath /usr/x86_64-linux-musl/lib64/ \
 		-dynamic-linker /lib/ld-musl-x86_64.so.1 \
 		/usr/x86_64-linux-musl/lib64/crt1.o $^ -o $@
+	sudo setcap cap_net_admin+ep $@
 
 lkvm-s: $(OBJS)
 	ld /usr/x86_64-linux-musl/lib64/crt1.o $^ /usr/x86_64-linux-musl/lib64/libc.a -o $@
+	sudo setcap cap_net_admin+ep $@
 
 x86/bios/bios.bin.elf:
 	$(CC) $(CFLAGS) -m16 -c x86/bios/e820.c -o $(BUILD)/x86/bios/e820.o

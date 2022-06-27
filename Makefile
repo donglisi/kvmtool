@@ -10,6 +10,7 @@ OBJS	+= $(BUILD)/devices.o
 OBJS	+= $(BUILD)/disk/core.o
 OBJS	+= $(BUILD)/hw/serial.o
 OBJS	+= $(BUILD)/hw/rtc.o
+OBJS	+= $(BUILD)/hw/i8042.o
 OBJS	+= $(BUILD)/irq.o
 OBJS	+= $(BUILD)/kvm-cpu.o
 OBJS	+= $(BUILD)/kvm.o

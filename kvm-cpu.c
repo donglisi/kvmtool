@@ -192,25 +192,6 @@ int kvm_cpu__start(struct kvm_cpu *cpu)
 				goto panic_kvm;
 			break;
 		}
-		case KVM_EXIT_MMIO: {
-			bool ret;
-
-			/*
-			 * If we had MMIO exit, coalesced ring should be processed
-			 * *before* processing the exit itself
-			 */
-			kvm_cpu__handle_coalesced_mmio(cpu);
-
-			ret = kvm_cpu__emulate_mmio(cpu,
-						    cpu->kvm_run->mmio.phys_addr,
-						    cpu->kvm_run->mmio.data,
-						    cpu->kvm_run->mmio.len,
-						    cpu->kvm_run->mmio.is_write);
-
-			if (!ret)
-				goto panic_kvm;
-			break;
-		}
 		case KVM_EXIT_INTR:
 			if (cpu->is_running)
 				break;
@@ -247,7 +228,6 @@ int kvm_cpu__start(struct kvm_cpu *cpu)
 			break;
 		}
 		}
-		kvm_cpu__handle_coalesced_mmio(cpu);
 	}
 
 exit_kvm:

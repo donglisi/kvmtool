@@ -22,7 +22,6 @@ OBJS	+= $(BUILD)/term.o
 OBJS	+= $(BUILD)/virtio/blk.o
 OBJS	+= $(BUILD)/virtio/core.o
 OBJS	+= $(BUILD)/virtio/net.o
-OBJS	+= $(BUILD)/virtio/mmio.o
 OBJS	+= $(BUILD)/virtio/pci.o
 OBJS	+= $(BUILD)/virtio/console.o
 OBJS	+= $(BUILD)/disk/blk.o

@@ -159,15 +159,13 @@ late_exit(thread_pool__exit);
 
 void thread_pool__do_job(struct thread_pool__job *job)
 {
-	struct thread_pool__job *jobinfo = job;
-
-	if (jobinfo == NULL || jobinfo->callback == NULL)
+	if (job == NULL || job->callback == NULL)
 		return;
 
-	mutex_lock(&jobinfo->mutex);
-	if (jobinfo->signalcount++ == 0)
+	mutex_lock(&job->mutex);
+	if (job->signalcount++ == 0)
 		thread_pool__job_push(job);
-	mutex_unlock(&jobinfo->mutex);
+	mutex_unlock(&job->mutex);
 
 	mutex_lock(&job_mutex);
 	pthread_cond_signal(&job_cond);

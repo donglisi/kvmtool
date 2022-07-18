@@ -486,16 +486,8 @@ int pci__init(struct kvm *kvm)
 				 pci_config_address_mmio, NULL);
 	if (r < 0)
 		goto err_unregister_data;
-
-	r = kvm__register_mmio(kvm, KVM_PCI_CFG_AREA, PCI_CFG_SIZE, false,
-			       pci_config_mmio_access, kvm);
-	if (r < 0)
-		goto err_unregister_addr;
-
 	return 0;
 
-err_unregister_addr:
-	kvm__deregister_pio(kvm, PCI_CONFIG_ADDRESS);
 err_unregister_data:
 	kvm__deregister_pio(kvm, PCI_CONFIG_DATA);
 	return r;

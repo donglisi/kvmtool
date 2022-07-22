@@ -429,31 +429,6 @@ int virtio_pci__signal_vq(struct kvm *kvm, struct virtio_device *vdev, u32 vq)
 	return 0;
 }
 
-int virtio_pci__signal_config(struct kvm *kvm, struct virtio_device *vdev)
-{
-	struct virtio_pci *vpci = vdev->virtio;
-	int tbl = vpci->config_vector;
-
-	if (virtio_pci__msix_enabled(vpci) && tbl != VIRTIO_MSI_NO_VECTOR) {
-		if (vpci->pci_hdr.msix.ctrl & cpu_to_le16(PCI_MSIX_FLAGS_MASKALL) ||
-		    vpci->msix_table[tbl].ctrl & cpu_to_le16(PCI_MSIX_ENTRY_CTRL_MASKBIT)) {
-
-			vpci->msix_pba |= 1 << tbl;
-			return 0;
-		}
-
-		if (vpci->features & VIRTIO_PCI_F_SIGNAL_MSI)
-			virtio_pci__signal_msi(kvm, vpci, tbl);
-		else
-			kvm__irq_trigger(kvm, vpci->config_gsi);
-	} else {
-		vpci->isr = VIRTIO_PCI_ISR_CONFIG;
-		kvm__irq_trigger(kvm, vpci->legacy_irq_line);
-	}
-
-	return 0;
-}
-
 static void virtio_pci__io_mmio_callback(struct kvm_cpu *vcpu,
 					 u64 addr, u8 *data, u32 len,
 					 u8 is_write, void *ptr)

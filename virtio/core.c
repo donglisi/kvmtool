@@ -337,7 +337,6 @@ int virtio_init(struct kvm *kvm, void *dev, struct virtio_device *vdev,
 		vdev->virtio			= virtio;
 		vdev->ops			= ops;
 		vdev->ops->signal_vq		= virtio_pci__signal_vq;
-		vdev->ops->signal_config	= virtio_pci__signal_config;
 		vdev->ops->init			= virtio_pci__init;
 		vdev->ops->exit			= virtio_pci__exit;
 		vdev->ops->reset		= virtio_pci__reset;

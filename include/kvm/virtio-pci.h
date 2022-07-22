@@ -50,7 +50,6 @@ struct virtio_pci {
 };
 
 int virtio_pci__signal_vq(struct kvm *kvm, struct virtio_device *vdev, u32 vq);
-int virtio_pci__signal_config(struct kvm *kvm, struct virtio_device *vdev);
 int virtio_pci__exit(struct kvm *kvm, struct virtio_device *vdev);
 int virtio_pci__reset(struct kvm *kvm, struct virtio_device *vdev);
 int virtio_pci__init(struct kvm *kvm, void *dev, struct virtio_device *vdev,

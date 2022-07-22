@@ -110,13 +110,6 @@ static struct disk_image *disk_image__open(const char *filename, bool readonly, 
 	if (stat(filename, &st) < 0)
 		return ERR_PTR(-errno);
 
-	/* blk device ?*/
-	disk = blkdev__probe(filename, flags, &st);
-	if (!IS_ERR_OR_NULL(disk)) {
-		disk->readonly = readonly;
-		return disk;
-	}
-
 	fd = open(filename, flags);
 	if (fd < 0)
 		return ERR_PTR(fd);

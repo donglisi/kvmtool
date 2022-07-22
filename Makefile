@@ -58,7 +58,7 @@ $(BUILD)/%.o: %.c
 	@ mkdir -p build/{x86/bios,net/uip,util,disk,virtio,hw,vfio}
 	$(CC) -c $(CFLAGS) $< -o $@
 
-all: lkvm lkvm-s
+all: lkvm
 
 lkvm: $(OBJS)
 	ld -nostdlib -L/usr/x86_64-linux-musl/lib64 -lc -lpthread \

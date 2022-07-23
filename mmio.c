@@ -108,17 +108,11 @@ static void mmio_put(struct kvm *kvm, struct rb_root *root, struct mmio_mapping 
 	mutex_unlock(&mmio_lock);
 }
 
-static bool trap_is_mmio(unsigned int flags)
-{
-	return (flags & IOTRAP_BUS_MASK) == DEVICE_BUS_MMIO;
-}
-
 int kvm__register_iotrap(struct kvm *kvm, u64 phys_addr, u64 phys_addr_len,
 			 mmio_handler_fn mmio_fn, void *ptr,
 			 unsigned int flags)
 {
 	struct mmio_mapping *mmio;
-	struct kvm_coalesced_mmio_zone zone;
 	int ret;
 
 	mmio = malloc(sizeof(*mmio));
@@ -137,23 +131,8 @@ int kvm__register_iotrap(struct kvm *kvm, u64 phys_addr, u64 phys_addr_len,
 		.remove		= false,
 	};
 
-	if (trap_is_mmio(flags) && (flags & IOTRAP_COALESCE)) {
-		zone = (struct kvm_coalesced_mmio_zone) {
-			.addr	= phys_addr,
-			.size	= phys_addr_len,
-		};
-		ret = ioctl(kvm->vm_fd, KVM_REGISTER_COALESCED_MMIO, &zone);
-		if (ret < 0) {
-			free(mmio);
-			return -errno;
-		}
-	}
-
 	mutex_lock(&mmio_lock);
-	if (trap_is_mmio(flags))
-		ret = mmio_insert(&mmio_tree, mmio);
-	else
-		ret = mmio_insert(&pio_tree, mmio);
+	ret = mmio_insert(&pio_tree, mmio);
 	mutex_unlock(&mmio_lock);
 
 	return ret;
@@ -164,10 +143,7 @@ bool kvm__deregister_iotrap(struct kvm *kvm, u64 phys_addr, unsigned int flags)
 	struct mmio_mapping *mmio;
 	struct rb_root *tree;
 
-	if (trap_is_mmio(flags))
-		tree = &mmio_tree;
-	else
-		tree = &pio_tree;
+	tree = &pio_tree;
 
 	mutex_lock(&mmio_lock);
 	mmio = mmio_search_single(tree, phys_addr);

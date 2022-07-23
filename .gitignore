@@ -3,3 +3,4 @@ build
 x86/bios/bios.bin
 x86/bios/bios.bin.elf
 x86/bios/bios-rom.h
+.gdb_history

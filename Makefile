@@ -1,6 +1,6 @@
 DEFINES	:= -D_GNU_SOURCE -DKVMTOOLS_VERSION='"1.0"' -DBUILD_ARCH='"x86"'
 CC	:= gcc
-CFLAGS	:= -nostdinc -I/usr/x86_64-linux-musl/include/ -Iinclude -Ix86/include $(DEFINES)
+CFLAGS	:= -nostdinc -I/usr/x86_64-linux-musl/include/ -Iinclude -Ix86/include $(DEFINES) -g
 BUILD	:= build
 
 OBJS := devices.o irq.o kvm-cpu.o kvm.o main.o builtin-run.o kvm-cmd.o mmio.o pci.o term.o ioeventfd.o

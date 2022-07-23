@@ -279,10 +279,7 @@ static int virtio_pci__bar_activate(struct kvm *kvm,
 	u32 bar_addr, bar_size;
 	int r = -EINVAL;
 
-	if (vdev->legacy)
-		mmio_fn = &virtio_pci_legacy__io_mmio_callback;
-	else
-		mmio_fn = &virtio_pci_modern__io_mmio_callback;
+	mmio_fn = &virtio_pci_modern__io_mmio_callback;
 
 	assert(bar_num <= 2);
 

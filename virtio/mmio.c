@@ -161,9 +161,7 @@ int virtio_mmio_init(struct kvm *kvm, void *dev, struct virtio_device *vdev,
 		vdev->endian = VIRTIO_ENDIAN_LE;
 
 	r = kvm__register_mmio(kvm, vmmio->addr, VIRTIO_MMIO_IO_SIZE, false,
-			       legacy ? virtio_mmio_legacy_callback :
-					virtio_mmio_modern_callback,
-			       vdev);
+					virtio_mmio_modern_callback, vdev);
 	if (r < 0)
 		return r;
 

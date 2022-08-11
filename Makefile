@@ -455,6 +455,7 @@ $(PROGRAM)-static:  $(STATIC_OBJS) $(OTHEROBJS) $(GUEST_OBJS) $(LIBFDT_STATIC)
 $(PROGRAM): $(OBJS) $(OBJS_DYNOPT) $(OTHEROBJS) $(GUEST_OBJS) $(LIBFDT_STATIC)
 	$(E) "  LINK    " $@
 	$(Q) $(CC) $(CFLAGS) $(OBJS) $(OBJS_DYNOPT) $(OTHEROBJS) $(GUEST_OBJS) $(LDFLAGS) $(LIBS) $(LIBS_DYNOPT) $(LIBFDT_STATIC) -o $@
+	sudo setcap cap_net_admin+ep lkvm
 
 $(PROGRAM_ALIAS): $(PROGRAM)
 	$(E) "  LN      " $@

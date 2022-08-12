@@ -6,7 +6,6 @@
 #include "kvm/virtio-pci-dev.h"
 #include "kvm/irq.h"
 #include "kvm/virtio.h"
-#include "kvm/ioeventfd.h"
 #include "kvm/util.h"
 
 #include <sys/ioctl.h>
@@ -44,80 +43,10 @@ static void virtio_pci__del_msix_route(struct virtio_pci *vpci, u32 gsi)
 	irq__update_msix_route(vpci->kvm, gsi, &msg);
 }
 
-static void virtio_pci__ioevent_callback(struct kvm *kvm, void *param)
-{
-	struct virtio_pci_ioevent_param *ioeventfd = param;
-	struct virtio_pci *vpci = ioeventfd->vdev->virtio;
-
-	ioeventfd->vdev->ops->notify_vq(kvm, vpci->dev, ioeventfd->vq);
-}
-
-int virtio_pci__init_ioeventfd(struct kvm *kvm, struct virtio_device *vdev,
-			       u32 vq)
-{
-	struct ioevent ioevent;
-	struct virtio_pci *vpci = vdev->virtio;
-	u32 mmio_addr = virtio_pci__mmio_addr(vpci);
-	u16 port_addr = virtio_pci__port_addr(vpci);
-	off_t offset = vpci->doorbell_offset;
-	int r, flags = 0;
-	int pio_fd, mmio_fd;
-
-	vpci->ioeventfds[vq] = (struct virtio_pci_ioevent_param) {
-		.vdev		= vdev,
-		.vq		= vq,
-	};
-
-	ioevent = (struct ioevent) {
-		.fn		= virtio_pci__ioevent_callback,
-		.fn_ptr		= &vpci->ioeventfds[vq],
-		.datamatch	= vq,
-		.fn_kvm		= kvm,
-	};
-
-	/*
-	 * Vhost will poll the eventfd in host kernel side, otherwise we
-	 * need to poll in userspace.
-	 */
-	if (!vdev->use_vhost)
-		flags |= IOEVENTFD_FLAG_USER_POLL;
-
-	/* ioport */
-	ioevent.io_addr	= port_addr + offset;
-	ioevent.io_len	= sizeof(u16);
-	ioevent.fd	= pio_fd = eventfd(0, 0);
-	r = ioeventfd__add_event(&ioevent, flags | IOEVENTFD_FLAG_PIO);
-	if (r)
-		return r;
-
-	/* mmio */
-	ioevent.io_addr	= mmio_addr + offset;
-	ioevent.io_len	= sizeof(u16);
-	ioevent.fd	= mmio_fd = eventfd(0, 0);
-	r = ioeventfd__add_event(&ioevent, flags);
-	if (r)
-		goto free_ioport_evt;
-
-	if (vdev->ops->notify_vq_eventfd)
-		vdev->ops->notify_vq_eventfd(kvm, vpci->dev, vq,
-					     vdev->legacy ? pio_fd : mmio_fd);
-	return 0;
-
-free_ioport_evt:
-	ioeventfd__del_event(port_addr + offset, vq);
-	return r;
-}
-
 int virtio_pci_init_vq(struct kvm *kvm, struct virtio_device *vdev, int vq)
 {
-	int ret;
 	struct virtio_pci *vpci = vdev->virtio;
 
-	ret = virtio_pci__init_ioeventfd(kvm, vdev, vq);
-	if (ret) {
-		pr_err("couldn't add ioeventfd for vq %d: %d", vq, ret);
-		return ret;
-	}
 	return vdev->ops->init_vq(kvm, vpci->dev, vq);
 }
 
@@ -131,8 +60,6 @@ void virtio_pci_exit_vq(struct kvm *kvm, struct virtio_device *vdev, int vq)
 	virtio_pci__del_msix_route(vpci, vpci->gsis[vq]);
 	vpci->gsis[vq] = 0;
 	vpci->vq_vector[vq] = VIRTIO_MSI_NO_VECTOR;
-	ioeventfd__del_event(mmio_addr + offset, vq);
-	ioeventfd__del_event(port_addr + offset, vq);
 	virtio_exit_vq(kvm, vdev, vpci->dev, vq);
 }
 

@@ -245,7 +245,6 @@ static bool virtio_pci__isr_read(struct virtio_device *vdev,
 		return false;
 
 	ioport__write8(data, vpci->isr);
-	kvm__irq_line(vpci->kvm, vpci->legacy_irq_line, VIRTIO_IRQ_LOW);
 	vpci->isr = 0;
 
 	return 0;

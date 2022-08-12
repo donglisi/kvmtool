@@ -163,11 +163,8 @@ int virtio_pci__signal_vq(struct kvm *kvm, struct virtio_device *vdev, u32 vq)
 
 		if (vpci->signal_msi)
 			virtio_pci__signal_msi(kvm, vpci, vpci->vq_vector[vq]);
-		else
-			kvm__irq_trigger(kvm, vpci->gsis[vq]);
 	} else {
 		vpci->isr = VIRTIO_IRQ_HIGH;
-		kvm__irq_line(kvm, vpci->legacy_irq_line, VIRTIO_IRQ_HIGH);
 	}
 	return 0;
 }
@@ -187,11 +184,8 @@ int virtio_pci__signal_config(struct kvm *kvm, struct virtio_device *vdev)
 
 		if (vpci->signal_msi)
 			virtio_pci__signal_msi(kvm, vpci, tbl);
-		else
-			kvm__irq_trigger(kvm, vpci->config_gsi);
 	} else {
 		vpci->isr = VIRTIO_PCI_ISR_CONFIG;
-		kvm__irq_trigger(kvm, vpci->legacy_irq_line);
 	}
 
 	return 0;

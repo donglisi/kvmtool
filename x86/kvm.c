@@ -182,27 +182,6 @@ void kvm__arch_delete_ram(struct kvm *kvm)
 	munmap(kvm->ram_start, kvm->ram_size);
 }
 
-void kvm__irq_line(struct kvm *kvm, int irq, int level)
-{
-	struct kvm_irq_level irq_level;
-
-	irq_level	= (struct kvm_irq_level) {
-		{
-			.irq		= irq,
-		},
-		.level		= level,
-	};
-
-	if (ioctl(kvm->vm_fd, KVM_IRQ_LINE, &irq_level) < 0)
-		die_perror("KVM_IRQ_LINE failed");
-}
-
-void kvm__irq_trigger(struct kvm *kvm, int irq)
-{
-	kvm__irq_line(kvm, irq, 1);
-	kvm__irq_line(kvm, irq, 0);
-}
-
 #define BOOT_LOADER_SELECTOR	0x1000
 #define BOOT_LOADER_IP		0x0000
 #define BOOT_LOADER_SP		0x8000

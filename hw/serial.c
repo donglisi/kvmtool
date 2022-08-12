@@ -148,53 +148,6 @@ static void serial8250_flush_tx(struct kvm *kvm, struct serial8250_device *dev)
 	}
 }
 
-static void serial8250_update_irq(struct kvm *kvm, struct serial8250_device *dev)
-{
-	u8 iir = 0;
-
-	/* Handle clear rx */
-	if (dev->lcr & UART_FCR_CLEAR_RCVR) {
-		dev->lcr &= ~UART_FCR_CLEAR_RCVR;
-		dev->rxcnt = dev->rxdone = 0;
-		dev->lsr &= ~UART_LSR_DR;
-	}
-
-	/* Handle clear tx */
-	if (dev->lcr & UART_FCR_CLEAR_XMIT) {
-		dev->lcr &= ~UART_FCR_CLEAR_XMIT;
-		dev->txcnt = 0;
-		dev->lsr |= UART_LSR_TEMT | UART_LSR_THRE;
-	}
-
-	/* Data ready and rcv interrupt enabled ? */
-	if ((dev->ier & UART_IER_RDI) && (dev->lsr & UART_LSR_DR))
-		iir |= UART_IIR_RDI;
-
-	/* Transmitter empty and interrupt enabled ? */
-	if ((dev->ier & UART_IER_THRI) && (dev->lsr & UART_LSR_TEMT))
-		iir |= UART_IIR_THRI;
-
-	/* Now update the irq line, if necessary */
-	if (!iir) {
-		dev->iir = UART_IIR_NO_INT;
-		if (dev->irq_state)
-			kvm__irq_line(kvm, dev->irq, 0);
-	} else {
-		dev->iir = iir;
-		if (!dev->irq_state)
-			kvm__irq_line(kvm, dev->irq, 1);
-	}
-	dev->irq_state = iir;
-
-	/*
-	 * If the kernel disabled the tx interrupt, we know that there
-	 * is nothing more to transmit, so we can reset our tx logic
-	 * here.
-	 */
-	if (!(dev->ier & UART_IER_THRI))
-		serial8250_flush_tx(kvm, dev);
-}
-
 #define SYSRQ_PENDING_NONE		0
 
 static int sysrq_pending;
@@ -248,8 +201,6 @@ void serial8250__update_consoles(struct kvm *kvm)
 
 		/* Restrict sysrq injection to the first port */
 		serial8250__receive(kvm, dev, i == 0);
-
-		serial8250_update_irq(kvm, dev);
 
 		mutex_unlock(&dev->mutex);
 	}
@@ -324,8 +275,6 @@ static bool serial8250_out(struct serial8250_device *dev, struct kvm_cpu *vcpu,
 		break;
 	}
 
-	serial8250_update_irq(vcpu->kvm, dev);
-
 	mutex_unlock(&dev->mutex);
 
 	return ret;
@@ -392,8 +341,6 @@ static bool serial8250_in(struct serial8250_device *dev, struct kvm_cpu *vcpu,
 		ret = false;
 		break;
 	}
-
-	serial8250_update_irq(vcpu->kvm, dev);
 
 	mutex_unlock(&dev->mutex);
 

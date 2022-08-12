@@ -186,9 +186,6 @@ static int virtio_pci__bar_activate(struct kvm *kvm,
 	bar_size = pci__bar_size(pci_hdr, bar_num);
 
 	switch (bar_num) {
-	case 0:
-		r = kvm__register_pio(kvm, bar_addr, bar_size, mmio_fn, vdev);
-		break;
 	case 1:
 		r =  kvm__register_mmio(kvm, bar_addr, bar_size, false, mmio_fn,
 					vdev);
@@ -257,15 +254,12 @@ int virtio_pci__init(struct kvm *kvm, void *dev, struct virtio_device *vdev,
 		.class[2]		= (class >> 16) & 0xff,
 		.subsys_vendor_id	= cpu_to_le16(PCI_SUBSYSTEM_VENDOR_ID_REDHAT_QUMRANET),
 		.subsys_id		= cpu_to_le16(subsys_id),
-		.bar[0]			= cpu_to_le32(port_addr
-							| PCI_BASE_ADDRESS_SPACE_IO),
 		.bar[1]			= cpu_to_le32(mmio_addr
 							| PCI_BASE_ADDRESS_SPACE_MEMORY),
 		.bar[2]			= cpu_to_le32(msix_io_block
 							| PCI_BASE_ADDRESS_SPACE_MEMORY),
 		.status			= cpu_to_le16(PCI_STATUS_CAP_LIST),
 		.capabilities		= PCI_CAP_OFF(&vpci->pci_hdr, msix),
-		.bar_size[0]		= cpu_to_le32(PCI_IO_SIZE),
 		.bar_size[1]		= cpu_to_le32(PCI_IO_SIZE),
 		.bar_size[2]		= cpu_to_le32(VIRTIO_MSIX_BAR_SIZE),
 	};

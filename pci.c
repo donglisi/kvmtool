@@ -333,24 +333,6 @@ void pci__config_rd(struct kvm *kvm, union pci_config_address addr, void *data, 
 	}
 }
 
-static void pci_config_mmio_access(struct kvm_cpu *vcpu, u64 addr, u8 *data,
-				   u32 len, u8 is_write, void *kvm)
-{
-	union pci_config_address cfg_addr;
-
-	addr			-= KVM_PCI_CFG_AREA;
-	cfg_addr.w		= (u32)addr;
-	cfg_addr.enable_bit	= 1;
-
-	if (len > 4)
-		len = 4;
-
-	if (is_write)
-		pci__config_wr(kvm, cfg_addr, data, len);
-	else
-		pci__config_rd(kvm, cfg_addr, data, len);
-}
-
 struct pci_device_header *pci__find_dev(u8 dev_num)
 {
 	struct device_header *hdr = device__find_dev(DEVICE_BUS_PCI, dev_num);
@@ -410,10 +392,6 @@ int pci__init(struct kvm *kvm)
 	if (r < 0)
 		goto err_unregister_data;
 
-	r = kvm__register_mmio(kvm, KVM_PCI_CFG_AREA, PCI_CFG_SIZE, false,
-			       pci_config_mmio_access, kvm);
-	if (r < 0)
-		goto err_unregister_addr;
 
 	return 0;
 

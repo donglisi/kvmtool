@@ -236,20 +236,6 @@ static bool virtio_pci__common_read(struct virtio_device *vdev,
 	return true;
 }
 
-static bool virtio_pci__isr_read(struct virtio_device *vdev,
-				 unsigned long offset, void *data, int size)
-{
-	struct virtio_pci *vpci = vdev->virtio;
-
-	if (WARN_ON(offset - VPCI_CFG_ISR_START != 0))
-		return false;
-
-	ioport__write8(data, vpci->isr);
-	vpci->isr = 0;
-
-	return 0;
-}
-
 static bool virtio_pci__config_read(struct virtio_device *vdev,
 				    unsigned long offset, void *data, int size)
 {
@@ -276,10 +262,6 @@ static bool virtio_pci_access(struct kvm_cpu *vcpu, struct virtio_device *vdev,
 	case VPCI_CFG_NOTIFY_START...VPCI_CFG_NOTIFY_END:
 		if (write)
 			handler = virtio_pci__notify_write;
-		break;
-	case VPCI_CFG_ISR_START...VPCI_CFG_ISR_END:
-		if (!write)
-			handler = virtio_pci__isr_read;
 		break;
 	case VPCI_CFG_DEV_START...VPCI_CFG_DEV_END:
 		if (write)

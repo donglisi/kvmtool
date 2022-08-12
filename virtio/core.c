@@ -11,16 +11,6 @@
 #include "kvm/util.h"
 #include "kvm/kvm.h"
 
-
-const char* virtio_trans_name(enum virtio_trans trans)
-{
-	if (trans == VIRTIO_PCI || trans == VIRTIO_PCI_LEGACY)
-		return "pci";
-	else if (trans == VIRTIO_MMIO || trans == VIRTIO_MMIO_LEGACY)
-		return "mmio";
-	return "unknown";
-}
-
 void virt_queue__used_idx_advance(struct virt_queue *queue, u16 jump)
 {
 	u16 idx = virtio_guest_to_host_u16(queue, queue->vring.used->idx);
@@ -127,38 +117,6 @@ u16 virt_queue__get_iov(struct virt_queue *vq, struct iovec iov[], u16 *out, u16
 	return virt_queue__get_head_iov(vq, iov, out, in, head, kvm);
 }
 
-/* in and out are relative to guest */
-u16 virt_queue__get_inout_iov(struct kvm *kvm, struct virt_queue *queue,
-			      struct iovec in_iov[], struct iovec out_iov[],
-			      u16 *in, u16 *out)
-{
-	struct vring_desc *desc;
-	u16 head, idx;
-
-	idx = head = virt_queue__pop(queue);
-	*out = *in = 0;
-	do {
-		u64 addr;
-		desc = virt_queue__get_desc(queue, idx);
-		addr = virtio_guest_to_host_u64(queue, desc->addr);
-		if (virt_desc__test_flag(queue, desc, VRING_DESC_F_WRITE)) {
-			in_iov[*in].iov_base = guest_flat_to_host(kvm, addr);
-			in_iov[*in].iov_len = virtio_guest_to_host_u32(queue, desc->len);
-			(*in)++;
-		} else {
-			out_iov[*out].iov_base = guest_flat_to_host(kvm, addr);
-			out_iov[*out].iov_len = virtio_guest_to_host_u32(queue, desc->len);
-			(*out)++;
-		}
-		if (virt_desc__test_flag(queue, desc, VRING_DESC_F_NEXT))
-			idx = virtio_guest_to_host_u16(queue, desc->next);
-		else
-			break;
-	} while (1);
-
-	return head;
-}
-
 void virtio_init_device_vq(struct kvm *kvm, struct virtio_device *vdev,
 			   struct virt_queue *vq, size_t nr_descs)
 {
@@ -195,20 +153,6 @@ void virtio_exit_vq(struct kvm *kvm, struct virtio_device *vdev,
 	if (vq->enabled && vdev->ops->exit_vq)
 		vdev->ops->exit_vq(kvm, dev, num);
 	memset(vq, 0, sizeof(*vq));
-}
-
-int virtio__get_dev_specific_field(int offset, bool msix, u32 *config_off)
-{
-	if (msix) {
-		if (offset < 4)
-			return VIRTIO_PCI_O_MSIX;
-		else
-			offset -= 4;
-	}
-
-	*config_off = offset;
-
-	return VIRTIO_PCI_O_CONFIG;
 }
 
 bool virtio_queue__should_signal(struct virt_queue *vq)
@@ -336,7 +280,6 @@ int virtio_init(struct kvm *kvm, void *dev, struct virtio_device *vdev,
 		vdev->virtio			= virtio;
 		vdev->ops			= ops;
 		vdev->ops->signal_vq		= virtio_pci__signal_vq;
-		vdev->ops->signal_config	= virtio_pci__signal_config;
 		vdev->ops->init			= virtio_pci__init;
 		vdev->ops->exit			= virtio_pci__exit;
 		vdev->ops->reset		= virtio_pci__reset;
@@ -347,34 +290,4 @@ int virtio_init(struct kvm *kvm, void *dev, struct virtio_device *vdev,
 	};
 
 	return r;
-}
-
-int virtio_compat_add_message(const char *device, const char *config)
-{
-	int len = 1024;
-	int compat_id;
-	char *title;
-	char *desc;
-
-	title = malloc(len);
-	if (!title)
-		return -ENOMEM;
-
-	desc = malloc(len);
-	if (!desc) {
-		free(title);
-		return -ENOMEM;
-	}
-
-	snprintf(title, len, "%s device was not detected.", device);
-	snprintf(desc,  len, "While you have requested a %s device, "
-			     "the guest kernel did not initialize it.\n"
-			     "\tPlease make sure that the guest kernel was "
-			     "compiled with %s=y enabled in .config.",
-			     device, config);
-
-	free(desc);
-	free(title);
-
-	return compat_id;
 }

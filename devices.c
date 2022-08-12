@@ -74,20 +74,3 @@ struct device_header *device__find_dev(enum device_bus_type bus_type, u8 dev_num
 
 	return NULL;
 }
-
-struct device_header *device__first_dev(enum device_bus_type bus_type)
-{
-	struct rb_node *node;
-
-	if (bus_type >= DEVICE_BUS_MAX)
-		return NULL;
-
-	node = rb_first(&device_trees[bus_type].root);
-	return node ? rb_entry(node, struct device_header, node) : NULL;
-}
-
-struct device_header *device__next_dev(struct device_header *dev)
-{
-	struct rb_node *node = rb_next(&dev->node);
-	return node ? rb_entry(node, struct device_header, node) : NULL;
-}

@@ -205,49 +205,6 @@ static void pci_config_command_wr(struct kvm *kvm,
 	pci_hdr->command = new_command;
 }
 
-static int pci_toggle_bar_regions(bool activate, struct kvm *kvm, u32 start, u32 size)
-{
-	struct device_header *dev_hdr;
-	struct pci_device_header *tmp_hdr;
-	u32 tmp_start, tmp_size;
-	int i, r;
-
-	dev_hdr = device__first_dev(DEVICE_BUS_PCI);
-	while (dev_hdr) {
-		tmp_hdr = dev_hdr->data;
-		for (i = 0; i < 6; i++) {
-			if (!pci_bar_is_implemented(tmp_hdr, i))
-				continue;
-
-			tmp_start = pci__bar_address(tmp_hdr, i);
-			tmp_size = pci__bar_size(tmp_hdr, i);
-			if (tmp_start + tmp_size <= start ||
-			    tmp_start >= start + size)
-				continue;
-
-			if (activate)
-				r = pci_activate_bar(kvm, tmp_hdr, i);
-			else
-				r = pci_deactivate_bar(kvm, tmp_hdr, i);
-			if (r < 0)
-				return r;
-		}
-		dev_hdr = device__next_dev(dev_hdr);
-	}
-
-	return 0;
-}
-
-static inline int pci_activate_bar_regions(struct kvm *kvm, u32 start, u32 size)
-{
-	return pci_toggle_bar_regions(true, kvm, start, size);
-}
-
-static inline int pci_deactivate_bar_regions(struct kvm *kvm, u32 start, u32 size)
-{
-	return pci_toggle_bar_regions(false, kvm, start, size);
-}
-
 static void pci_config_bar_wr(struct kvm *kvm,
 			      struct pci_device_header *pci_hdr, int bar_num,
 			      u32 value)
@@ -325,29 +282,8 @@ static void pci_config_bar_wr(struct kvm *kvm,
 	if (r < 0)
 		return;
 
-	r = pci_deactivate_bar_regions(kvm, new_addr, bar_size);
-	if (r < 0) {
-		/*
-		 * We cannot update the BAR because of an overlapping region
-		 * that failed to deactivate emulation, so keep the old BAR
-		 * value and re-activate emulation for it.
-		 */
-		pci_activate_bar(kvm, pci_hdr, bar_num);
-		return;
-	}
-
 	pci_hdr->bar[bar_num] = value;
 	r = pci_activate_bar(kvm, pci_hdr, bar_num);
-	if (r < 0) {
-		/*
-		 * New region cannot be emulated, re-enable the regions that
-		 * were overlapping.
-		 */
-		pci_activate_bar_regions(kvm, new_addr, bar_size);
-		return;
-	}
-
-	pci_activate_bar_regions(kvm, old_addr, bar_size);
 }
 
 void pci__config_wr(struct kvm *kvm, union pci_config_address addr, void *data, int size)

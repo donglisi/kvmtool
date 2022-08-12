@@ -169,28 +169,6 @@ int virtio_pci__signal_vq(struct kvm *kvm, struct virtio_device *vdev, u32 vq)
 	return 0;
 }
 
-int virtio_pci__signal_config(struct kvm *kvm, struct virtio_device *vdev)
-{
-	struct virtio_pci *vpci = vdev->virtio;
-	int tbl = vpci->config_vector;
-
-	if (virtio_pci__msix_enabled(vpci) && tbl != VIRTIO_MSI_NO_VECTOR) {
-		if (vpci->pci_hdr.msix.ctrl & cpu_to_le16(PCI_MSIX_FLAGS_MASKALL) ||
-		    vpci->msix_table[tbl].ctrl & cpu_to_le16(PCI_MSIX_ENTRY_CTRL_MASKBIT)) {
-
-			vpci->msix_pba |= 1 << tbl;
-			return 0;
-		}
-
-		if (vpci->signal_msi)
-			virtio_pci__signal_msi(kvm, vpci, tbl);
-	} else {
-		vpci->isr = VIRTIO_PCI_ISR_CONFIG;
-	}
-
-	return 0;
-}
-
 static int virtio_pci__bar_activate(struct kvm *kvm,
 				    struct pci_device_header *pci_hdr,
 				    int bar_num, void *data)

@@ -232,9 +232,6 @@ int virtio_console__init(struct kvm *kvm)
 	if (r < 0)
 		return r;
 
-	if (compat_id == -1)
-		compat_id = virtio_compat_add_message("virtio-console", "CONFIG_VIRTIO_CONSOLE");
-
 	return 0;
 }
 virtio_dev_init(virtio_console__init);

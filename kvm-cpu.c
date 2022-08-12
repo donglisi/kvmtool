@@ -69,22 +69,6 @@ static void kvm_cpu_signal_handler(int signum)
 	/* For SIGKVMTASK cpu->task is already set */
 }
 
-static void kvm_cpu__handle_coalesced_mmio(struct kvm_cpu *cpu)
-{
-	if (cpu->ring) {
-		while (cpu->ring->first != cpu->ring->last) {
-			struct kvm_coalesced_mmio *m;
-			m = &cpu->ring->coalesced_mmio[cpu->ring->first];
-			kvm_cpu__emulate_mmio(cpu,
-					      m->phys_addr,
-					      m->data,
-					      m->len,
-					      1);
-			cpu->ring->first = (cpu->ring->first + 1) % KVM_COALESCED_MMIO_MAX;
-		}
-	}
-}
-
 static DEFINE_MUTEX(task_lock);
 static int task_eventfd;
 
@@ -199,7 +183,6 @@ int kvm_cpu__start(struct kvm_cpu *cpu)
 			 * If we had MMIO exit, coalesced ring should be processed
 			 * *before* processing the exit itself
 			 */
-			kvm_cpu__handle_coalesced_mmio(cpu);
 
 			ret = kvm_cpu__emulate_mmio(cpu,
 						    cpu->kvm_run->mmio.phys_addr,
@@ -247,7 +230,6 @@ int kvm_cpu__start(struct kvm_cpu *cpu)
 			break;
 		}
 		}
-		kvm_cpu__handle_coalesced_mmio(cpu);
 	}
 
 exit_kvm:

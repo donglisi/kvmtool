@@ -36,23 +36,6 @@ u32 pci_get_mmio_block(u32 size)
 	return block;
 }
 
-int pci__assign_irq(struct pci_device_header *pci_hdr)
-{
-	/*
-	 * PCI supports only INTA#,B#,C#,D# per device.
-	 *
-	 * A#,B#,C#,D# are allowed for multifunctional devices so stick
-	 * with A# for our single function devices.
-	 */
-	pci_hdr->irq_pin	= 1;
-	pci_hdr->irq_line	= irq__alloc_line();
-
-	if (!pci_hdr->irq_type)
-		pci_hdr->irq_type = IRQ_TYPE_LEVEL_HIGH;
-
-	return pci_hdr->irq_line;
-}
-
 static bool pci_bar_is_implemented(struct pci_device_header *pci_hdr, int bar_num)
 {
 	return pci__bar_size(pci_hdr, bar_num);
@@ -160,38 +143,6 @@ out:
 	return r;
 }
 
-static void pci_config_command_wr(struct kvm *kvm,
-				  struct pci_device_header *pci_hdr,
-				  u16 new_command)
-{
-	int i;
-	bool toggle_io, toggle_mem;
-
-	toggle_io = (pci_hdr->command ^ new_command) & PCI_COMMAND_IO;
-	toggle_mem = (pci_hdr->command ^ new_command) & PCI_COMMAND_MEMORY;
-
-	for (i = 0; i < 6; i++) {
-		if (!pci_bar_is_implemented(pci_hdr, i))
-			continue;
-
-		if (toggle_io && pci__bar_is_io(pci_hdr, i)) {
-			if (__pci__io_space_enabled(new_command))
-				pci_activate_bar(kvm, pci_hdr, i);
-			else
-				pci_deactivate_bar(kvm, pci_hdr, i);
-		}
-
-		if (toggle_mem && pci__bar_is_memory(pci_hdr, i)) {
-			if (__pci__memory_space_enabled(new_command))
-				pci_activate_bar(kvm, pci_hdr, i);
-			else
-				pci_deactivate_bar(kvm, pci_hdr, i);
-		}
-	}
-
-	pci_hdr->command = new_command;
-}
-
 static void pci_config_bar_wr(struct kvm *kvm,
 			      struct pci_device_header *pci_hdr, int bar_num,
 			      u32 value)
@@ -297,12 +248,6 @@ void pci__config_wr(struct kvm *kvm, union pci_config_address addr, void *data, 
 	 */
 	if (*(u32 *)(base + offset) == 0)
 		return;
-
-	if (offset == PCI_COMMAND) {
-		memcpy(&value, data, size);
-		pci_config_command_wr(kvm, pci_hdr, (u16)value);
-		return;
-	}
 
 	bar = (offset - PCI_BAR_OFFSET(0)) / sizeof(u32);
 	if (bar < 6) {

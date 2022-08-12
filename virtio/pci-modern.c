@@ -351,18 +351,5 @@ int virtio_pci_modern_init(struct virtio_device *vdev)
 	};
 	BUILD_BUG_ON(VPCI_CFG_DEV_START & 0x3);
 
-	/*
-	 * TODO: implement this weird proxy capability (it is a "MUST" in the
-	 * spec, but I don't know if anyone actually uses it).
-	 * It doesn't use any BAR space. Instead the driver writes .cap.offset
-	 * and .cap.length to access a register in a BAR.
-	 */
-	hdr->virtio.pci = (struct virtio_pci_cfg_cap) {
-		.cap.cap_vndr		= PCI_CAP_ID_VNDR,
-		.cap.cap_next		= 0,
-		.cap.cap_len		= sizeof(hdr->virtio.pci),
-		.cap.cfg_type		= VIRTIO_PCI_CAP_PCI_CFG,
-	};
-
 	return 0;
 }

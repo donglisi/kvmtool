@@ -301,8 +301,6 @@ int virtio_pci__init(struct kvm *kvm, void *dev, struct virtio_device *vdev,
 	if (irq__can_signal_msi(kvm))
 		vpci->signal_msi = true;
 
-	vpci->legacy_irq_line = pci__assign_irq(&vpci->pci_hdr);
-
 	r = device__register(&vpci->dev_hdr);
 	if (r < 0)
 		return r;

@@ -231,7 +231,6 @@ int virtio_pci__init(struct kvm *kvm, void *dev, struct virtio_device *vdev,
 {
 	struct virtio_pci *vpci = vdev->virtio;
 	u32 mmio_addr, msix_io_block;
-	u16 port_addr;
 	int r;
 
 	vpci->kvm = kvm;
@@ -239,7 +238,6 @@ int virtio_pci__init(struct kvm *kvm, void *dev, struct virtio_device *vdev,
 
 	BUILD_BUG_ON(!is_power_of_two(PCI_IO_SIZE));
 
-	port_addr = pci_get_io_port_block(PCI_IO_SIZE);
 	mmio_addr = pci_get_mmio_block(PCI_IO_SIZE);
 	msix_io_block = pci_get_mmio_block(VIRTIO_MSIX_BAR_SIZE);
 

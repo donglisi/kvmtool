@@ -31,9 +31,7 @@
  */
 #define PCI_CONFIG_ADDRESS	0xcf8
 #define PCI_CONFIG_DATA		0xcfc
-#define PCI_CONFIG_BUS_FORWARD	0xcfa
 #define PCI_IO_SIZE		0x100
-#define PCI_IOPORT_START	0x6200
 
 struct kvm;
 

@@ -1,0 +1,87 @@
+diff --git a/kvm-cpu.c b/kvm-cpu.c
+index 7dec088..dad1357 100644
+--- a/kvm-cpu.c
++++ b/kvm-cpu.c
+@@ -15,6 +15,8 @@
+ #include <string.h>
+ #include <errno.h>
+ #include <stdio.h>
++#include <termios.h>
++#include <unistd.h>
+ 
+ extern __thread struct kvm_cpu *current_kvm_cpu;
+ 
+@@ -141,8 +143,23 @@ void kvm_cpu__run_on_all_cpus(struct kvm *kvm, struct kvm_cpu_task *task)
+ 	mutex_unlock(&task_lock);
+ }
+ 
++int mygetch(void)
++{
++	int ch;
++	struct termios oldt, newt;
++
++	tcgetattr ( STDIN_FILENO, &oldt );
++	newt = oldt;
++	newt.c_lflag &= ~( ICANON | ECHO );
++	tcsetattr ( STDIN_FILENO, TCSANOW, &newt );
++	ch = getchar();
++	tcsetattr ( STDIN_FILENO, TCSANOW, &oldt );
++	return ch;
++}
++
+ int kvm_cpu__start(struct kvm_cpu *cpu)
+ {
++	static int hlt_count = 0;
+ 	sigset_t sigset;
+ 
+ 	sigemptyset(&sigset);
+@@ -171,6 +188,10 @@ int kvm_cpu__start(struct kvm_cpu *cpu)
+ 		kvm_cpu__run(cpu);
+ 
+ 		switch (cpu->kvm_run->exit_reason) {
++		case KVM_EXIT_HLT:
++			printf("------------------------------hlt %d---------------------------------\n", hlt_count++);
++			mygetch();
++			break;
+ 		case KVM_EXIT_UNKNOWN:
+ 			break;
+ 		case KVM_EXIT_DEBUG:
+diff --git a/x86/kvm-cpu.c b/x86/kvm-cpu.c
+index b02ff65..1a69a7d 100644
+--- a/x86/kvm-cpu.c
++++ b/x86/kvm-cpu.c
+@@ -117,8 +117,10 @@ struct kvm_cpu *kvm_cpu__arch_init(struct kvm *kvm, unsigned long cpu_id)
+ 	if (coalesced_offset)
+ 		vcpu->ring = (void *)vcpu->kvm_run + (coalesced_offset * PAGE_SIZE);
+ 
++/*
+ 	if (kvm_cpu__set_lint(vcpu))
+ 		die_perror("KVM_SET_LAPIC failed");
++*/
+ 
+ 	vcpu->is_running = true;
+ 
+diff --git a/x86/kvm.c b/x86/kvm.c
+index 328fa75..e56d5af 100644
+--- a/x86/kvm.c
++++ b/x86/kvm.c
+@@ -157,6 +157,7 @@ void kvm__arch_init(struct kvm *kvm)
+ 	if (ram_size < KVM_32BIT_GAP_START) {
+ 		kvm->ram_size = ram_size;
+ 		kvm->ram_start = mmap_anon_or_hugetlbfs(kvm, hugetlbfs_path, ram_size);
++		printf("ram_start = %llu\n", kvm->ram_start);
+ 	} else {
+ 		kvm->ram_start = mmap_anon_or_hugetlbfs(kvm, hugetlbfs_path, ram_size + KVM_32BIT_GAP_SIZE);
+ 		kvm->ram_size = ram_size + KVM_32BIT_GAP_SIZE;
+@@ -172,9 +173,11 @@ void kvm__arch_init(struct kvm *kvm)
+ 
+ 	madvise(kvm->ram_start, kvm->ram_size, MADV_MERGEABLE);
+ 
++/*
+ 	ret = ioctl(kvm->vm_fd, KVM_CREATE_IRQCHIP);
+ 	if (ret < 0)
+ 		die_perror("KVM_CREATE_IRQCHIP ioctl");
++*/
+ }
+ 
+ void kvm__arch_delete_ram(struct kvm *kvm)

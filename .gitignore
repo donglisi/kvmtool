@@ -1,0 +1,8 @@
+GPATH
+GRTAGS
+GTAGS
+build/
+lkvm
+x86/bios/bios-rom.h
+x86/bios/bios.bin
+x86/bios/bios.bin.elf

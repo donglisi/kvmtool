@@ -329,9 +329,6 @@ int virtio_init(struct kvm *kvm, void *dev, struct virtio_device *vdev,
 	int r;
 
 	switch (trans) {
-	case VIRTIO_PCI_LEGACY:
-		vdev->legacy			= true;
-		/* fall through */
 	case VIRTIO_PCI:
 		virtio = calloc(sizeof(struct virtio_pci), 1);
 		if (!virtio)
@@ -343,22 +340,6 @@ int virtio_init(struct kvm *kvm, void *dev, struct virtio_device *vdev,
 		vdev->ops->init			= virtio_pci__init;
 		vdev->ops->exit			= virtio_pci__exit;
 		vdev->ops->reset		= virtio_pci__reset;
-		r = vdev->ops->init(kvm, dev, vdev, device_id, subsys_id, class);
-		break;
-	case VIRTIO_MMIO_LEGACY:
-		vdev->legacy			= true;
-		/* fall through */
-	case VIRTIO_MMIO:
-		virtio = calloc(sizeof(struct virtio_mmio), 1);
-		if (!virtio)
-			return -ENOMEM;
-		vdev->virtio			= virtio;
-		vdev->ops			= ops;
-		vdev->ops->signal_vq		= virtio_mmio_signal_vq;
-		vdev->ops->signal_config	= virtio_mmio_signal_config;
-		vdev->ops->init			= virtio_mmio_init;
-		vdev->ops->exit			= virtio_mmio_exit;
-		vdev->ops->reset		= virtio_mmio_reset;
 		r = vdev->ops->init(kvm, dev, vdev, device_id, subsys_id, class);
 		break;
 	default:
@@ -391,8 +372,6 @@ int virtio_compat_add_message(const char *device, const char *config)
 			     "\tPlease make sure that the guest kernel was "
 			     "compiled with %s=y enabled in .config.",
 			     device, config);
-
-	compat_id = compat__add_message(title, desc);
 
 	free(desc);
 	free(title);

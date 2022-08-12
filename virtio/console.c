@@ -144,8 +144,6 @@ static int init_vq(struct kvm *kvm, void *dev, u32 vq)
 
 	BUG_ON(vq >= VIRTIO_CONSOLE_NUM_QUEUES);
 
-	compat__remove_message(compat_id);
-
 	queue		= &cdev.vqs[vq];
 
 	virtio_init_device_vq(kvm, &cdev.vdev, queue, VIRTIO_CONSOLE_QUEUE_SIZE);

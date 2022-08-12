@@ -457,7 +457,6 @@ static int serial8250__device_init(struct kvm *kvm,
 	if (r < 0)
 		return r;
 
-	ioport__map_irq(&dev->irq);
 	r = kvm__register_iotrap(kvm, dev->iobase, 8, serial8250_mmio, dev,
 				 SERIAL8250_BUS_TYPE);
 

@@ -217,8 +217,6 @@ static int init_vq(struct kvm *kvm, void *dev, u32 vq)
 	unsigned int i;
 	struct blk_dev *bdev = dev;
 
-	compat__remove_message(compat_id);
-
 	virtio_init_device_vq(kvm, &bdev->vdev, &bdev->vqs[vq],
 			      VIRTIO_BLK_QUEUE_SIZE);
 

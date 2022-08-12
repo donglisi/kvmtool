@@ -55,25 +55,6 @@ ENTRY(bios_intfake)
 	IRET
 ENTRY_END(bios_intfake)
 
-/*
- * int 10 - video - service
- */
-ENTRY(bios_int10)
-	SAVE_BIOSREGS
-
-	movl		%esp, %eax
-	/* this is way easier than doing it in assembly */
-	/* just push all the regs and jump to a C handler */
-	call	int10_handler
-
-	RESTORE_BIOSREGS
-
-	/* Clear CF to indicate success.  */
-	andl	$~EFLAGS_CF, 0x4(%esp)
-
-	IRET
-ENTRY_END(bios_int10)
-
 ENTRY(bios_int15)
 	SAVE_BIOSREGS
 

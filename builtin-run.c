@@ -78,9 +78,6 @@ static int img_name_parser(const struct option *opt, const char *arg, int unset)
 
 	snprintf(path, PATH_MAX, "%s%s", kvm__get_dir(), arg);
 
-	if ((stat(arg, &st) == 0 && S_ISDIR(st.st_mode)) ||
-	   (stat(path, &st) == 0 && S_ISDIR(st.st_mode)))
-		return virtio_9p_img_name_parser(opt, arg, unset);
 	return disk_img_name_parser(opt, arg, unset);
 }
 
@@ -183,9 +180,6 @@ static int mem_parser(const struct option *opt, const char *arg, int unset)
 	OPT_BOOLEAN('\0', "nodefaults", &(cfg)->nodefaults, "Disable"   \
 			" implicit configuration that cannot be"	\
 			" disabled otherwise"),				\
-	OPT_CALLBACK('\0', "9p", NULL, "dir_to_share,tag_name",		\
-		     "Enable virtio 9p to share files between host and"	\
-		     " guest", virtio_9p_rootdir_parser, kvm),		\
 	OPT_STRING('\0', "console", &(cfg)->console, "serial, virtio or"\
 			" hv", "Console to use"),			\
 	OPT_U64('\0', "vsock", &(cfg)->vsock_cid,			\
@@ -214,18 +208,6 @@ static int mem_parser(const struct option *opt, const char *arg, int unset)
 			"Firmware image to boot in virtual machine"),	\
 	OPT_STRING('F', "flash", &(cfg)->flash_filename, "flash",\
 			"Flash image to present to virtual machine"),	\
-									\
-	OPT_GROUP("Networking options:"),				\
-	OPT_CALLBACK_DEFAULT('n', "network", NULL, "network params",	\
-		     "Create a new guest NIC",				\
-		     netdev_parser, NULL, kvm),				\
-	OPT_BOOLEAN('\0', "no-dhcp", &(cfg)->no_dhcp, "Disable kernel"	\
-			" DHCP in rootfs mode"),			\
-									\
-	OPT_GROUP("VFIO options:"),					\
-	OPT_CALLBACK('\0', "vfio-pci", NULL, "[domain:]bus:dev.fn",	\
-		     "Assign a PCI device to the virtual machine",	\
-		     vfio_device_parser, kvm),				\
 									\
 	OPT_GROUP("Debug options:"),					\
 	OPT_BOOLEAN('\0', "debug", &do_debug_print,			\
@@ -739,21 +721,12 @@ static struct kvm *kvm_cmd_run_init(int argc, const char **argv)
 	    !kvm->cfg.initrd_filename) {
 		char tmp[PATH_MAX];
 
-		kvm_setup_create_new(kvm->cfg.custom_rootfs_name);
-		kvm_setup_resolv(kvm->cfg.custom_rootfs_name);
-
 		snprintf(tmp, PATH_MAX, "%s%s", kvm__get_dir(), "default");
-		if (virtio_9p__register(kvm, tmp, "/dev/root") < 0)
-			die("Unable to initialize virtio 9p");
-		if (virtio_9p__register(kvm, "/", "hostfs") < 0)
-			die("Unable to initialize virtio 9p");
 		kvm->cfg.using_rootfs = kvm->cfg.custom_rootfs = 1;
 	}
 
 	if (kvm->cfg.custom_rootfs) {
 		kvm_run_set_sandbox(kvm);
-		if (kvm_setup_guest_init(kvm->cfg.custom_rootfs_name))
-			die("Failed to setup init for guest.");
 	}
 
 	if (kvm->cfg.nodefaults)
@@ -797,8 +770,6 @@ static int kvm_cmd_run_work(struct kvm *kvm)
 
 static void kvm_cmd_run_exit(struct kvm *kvm, int guest_ret)
 {
-	compat__print_all_messages();
-
 	init_list__exit(kvm);
 
 	if (guest_ret == 0)

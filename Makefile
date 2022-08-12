@@ -2,17 +2,15 @@ CC	:= gcc
 CFLAGS	:= -Iinclude -Ix86/include -D_GNU_SOURCE -DKVMTOOLS_VERSION='"1.0"' -DBUILD_ARCH='"x86"'
 BUILD	:= build
 
-OBJS := devices.o irq.o kvm-cpu.o kvm.o kvm-ipc.o main.o builtin-stop.o builtin-balloon.o builtin-debug.o builtin-help.o builtin-list.o builtin-stat.o builtin-pause.o builtin-resume.o builtin-version.o builtin-run.o builtin-setup.o builtin-sandbox.o kvm-cmd.o mmio.o pci.o term.o guest_compat.o ioeventfd.o
-OBJS += $(addprefix disk/, core.o qcow.o blk.o raw.o)
+OBJS := devices.o irq.o kvm-cpu.o kvm.o kvm-ipc.o main.o builtin-debug.o builtin-run.o kvm-cmd.o mmio.o pci.o term.o ioeventfd.o
+OBJS += $(addprefix disk/, core.o raw.o)
 OBJS += $(addprefix hw/, serial.o rtc.o)
-OBJS += $(addprefix virtio/, blk.o core.o net.o mmio.o mmio-legacy.o mmio-modern.o pci.o pci-legacy.o pci-modern.o 9p.o 9p-pdu.o console.o)
-OBJS += $(addprefix net/uip/, core.o arp.o icmp.o ipv4.o tcp.o udp.o buf.o csum.o dhcp.o)
+OBJS += $(addprefix virtio/, blk.o core.o pci.o pci-modern.o console.o)
 OBJS += $(addprefix util/, init.o threadpool.o parse-options.o iovec.o rbtree.o rbtree-interval.o strbuf.o read-write.o util.o)
-OBJS += $(addprefix vfio/, core.o pci.o)
-OBJS += $(addprefix x86/, boot.o ioport.o cpuid.o interrupt.o kvm.o kvm-cpu.o bios.o irq.o bios/bios-rom.o)
+OBJS += $(addprefix x86/, cpuid.o interrupt.o kvm.o kvm-cpu.o bios.o bios/bios-rom.o)
 OBJS := $(addprefix $(BUILD)/, $(OBJS))
 
-$(shell mkdir -p $(BUILD)/{x86/bios,net/uip,util,disk,virtio,hw,vfio})
+$(shell mkdir -p $(BUILD)/{x86/bios,util,disk,virtio,hw})
 
 $(BUILD)/%.o: %.c
 	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) $< -o $@
@@ -24,7 +22,7 @@ all: $(OBJS)
 	$(CC) $^ -o lkvm
 	sudo setcap cap_net_admin+ep lkvm
 
-BIOS := $(addprefix $(BUILD)/x86/bios/, e820.o memcpy.o int10.o int15.o entry.o)
+BIOS := $(addprefix $(BUILD)/x86/bios/, e820.o int15.o entry.o)
 $(BIOS): EXTRA_CFLAGS := -m16
 
 x86/bios/bios.bin.elf: $(BIOS)

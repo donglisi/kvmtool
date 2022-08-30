@@ -198,6 +198,7 @@ void kvm__arch_delete_ram(struct kvm *kvm)
 #define BOOT_LOADER_SP		0x8000
 #define BOOT_CMDLINE_OFFSET	0x20000
 #define COMMAND_LINE_SIZE	2048
+#define VMLINUX_KERNEL_START	0x200000
 
 #define BOOT_PROTOCOL_REQUIRED	0x206
 #define LOAD_HIGH		0x01
@@ -239,7 +240,7 @@ static bool load_flat_binary(struct kvm *kvm, int fd_kernel, int fd_initrd, cons
 	if (lseek(fd_initrd, cr3, SEEK_SET) < 0)
 		die_perror("lseek");
 	p = guest_flat_to_host(kvm, cr3);
-	file_size = read_file(fd_initrd, p, kvm->cfg.ram_size);
+	file_size = read_file(fd_initrd, p, kvm->cfg.ram_size - cr3);
 	if (file_size < 0)
 		die_perror("pagetable read");
 
@@ -256,8 +257,8 @@ static bool load_flat_binary(struct kvm *kvm, int fd_kernel, int fd_initrd, cons
 
 	if (lseek(fd_kernel, 0, SEEK_SET) < 0)
 		die_perror("lseek");
-	p = guest_flat_to_host(kvm, 0x200000);
-	file_size = read_file(fd_kernel, p, kvm->cfg.ram_size - 0x200000);
+	p = guest_flat_to_host(kvm, VMLINUX_KERNEL_START);
+	file_size = read_file(fd_kernel, p, kvm->cfg.ram_size - VMLINUX_KERNEL_START);
 	if (file_size < 0)
 		die_perror("kernel read");
 

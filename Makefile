@@ -1,5 +1,5 @@
 CC	:= gcc
-CFLAGS	:= -Iinclude -Ix86/include -D_GNU_SOURCE -DKVMTOOLS_VERSION='"1.0"' -DBUILD_ARCH='"x86"'
+CFLAGS	:= -Iinclude -Ix86/include -D_GNU_SOURCE -DKVMTOOLS_VERSION='"1.0"' -DBUILD_ARCH='"x86"' -g
 BUILD	:= build
 
 OBJS := devices.o irq.o kvm-cpu.o kvm.o kvm-ipc.o main.o builtin-debug.o builtin-run.o kvm-cmd.o mmio.o pci.o term.o

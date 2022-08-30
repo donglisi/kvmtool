@@ -195,17 +195,24 @@ static void kvm_cpu__setup_fpu(struct kvm_cpu *vcpu)
 
 static void kvm_cpu__setup_regs(struct kvm_cpu *vcpu)
 {
-	vcpu->regs = (struct kvm_regs) {
-		/* We start the guest in 16-bit real mode  */
-		.rflags	= 0x0000000000000002ULL,
+	if(load_vmlinux) {
+		vcpu->regs = (struct kvm_regs) {
+			.rip	= 0x0000000000200000ULL,
+			.rsi 	= ZEROPAGE_OFFSET,
+		};
+	} else {
+		vcpu->regs = (struct kvm_regs) {
+			/* We start the guest in 16-bit real mode  */
+			.rflags	= 0x0000000000000002ULL,
 
-		.rip	= vcpu->kvm->arch.boot_ip,
-		.rsp	= vcpu->kvm->arch.boot_sp,
-		.rbp	= vcpu->kvm->arch.boot_sp,
-	};
+			.rip	= vcpu->kvm->arch.boot_ip,
+			.rsp	= vcpu->kvm->arch.boot_sp,
+			.rbp	= vcpu->kvm->arch.boot_sp,
+		};
 
-	if (vcpu->regs.rip > USHRT_MAX)
-		die("ip 0x%llx is too high for real mode", (u64)vcpu->regs.rip);
+		if (vcpu->regs.rip > USHRT_MAX)
+			die("ip 0x%llx is too high for real mode", (u64)vcpu->regs.rip);
+	}
 
 	if (ioctl(vcpu->vcpu_fd, KVM_SET_REGS, &vcpu->regs) < 0)
 		die_perror("KVM_SET_REGS failed");
@@ -216,18 +223,26 @@ static void kvm_cpu__setup_sregs(struct kvm_cpu *vcpu)
 	if (ioctl(vcpu->vcpu_fd, KVM_GET_SREGS, &vcpu->sregs) < 0)
 		die_perror("KVM_GET_SREGS failed");
 
-	vcpu->sregs.cs.selector	= vcpu->kvm->arch.boot_selector;
-	vcpu->sregs.cs.base	= selector_to_base(vcpu->kvm->arch.boot_selector);
-	vcpu->sregs.ss.selector	= vcpu->kvm->arch.boot_selector;
-	vcpu->sregs.ss.base	= selector_to_base(vcpu->kvm->arch.boot_selector);
-	vcpu->sregs.ds.selector	= vcpu->kvm->arch.boot_selector;
-	vcpu->sregs.ds.base	= selector_to_base(vcpu->kvm->arch.boot_selector);
-	vcpu->sregs.es.selector	= vcpu->kvm->arch.boot_selector;
-	vcpu->sregs.es.base	= selector_to_base(vcpu->kvm->arch.boot_selector);
-	vcpu->sregs.fs.selector	= vcpu->kvm->arch.boot_selector;
-	vcpu->sregs.fs.base	= selector_to_base(vcpu->kvm->arch.boot_selector);
-	vcpu->sregs.gs.selector	= vcpu->kvm->arch.boot_selector;
-	vcpu->sregs.gs.base	= selector_to_base(vcpu->kvm->arch.boot_selector);
+	if (load_vmlinux) {
+		vcpu->sregs.cs.l	= 1;
+		vcpu->sregs.cr0		= 0x0000000080050033ULL;
+		vcpu->sregs.cr3		= cr3;
+		vcpu->sregs.cr4		= 0x0000000000000020ULL;
+		vcpu->sregs.efer	= 0x0000000000000500ULL;
+	} else {
+		vcpu->sregs.cs.selector	= vcpu->kvm->arch.boot_selector;
+		vcpu->sregs.cs.base	= selector_to_base(vcpu->kvm->arch.boot_selector);
+		vcpu->sregs.ss.selector	= vcpu->kvm->arch.boot_selector;
+		vcpu->sregs.ss.base	= selector_to_base(vcpu->kvm->arch.boot_selector);
+		vcpu->sregs.ds.selector	= vcpu->kvm->arch.boot_selector;
+		vcpu->sregs.ds.base	= selector_to_base(vcpu->kvm->arch.boot_selector);
+		vcpu->sregs.es.selector	= vcpu->kvm->arch.boot_selector;
+		vcpu->sregs.es.base	= selector_to_base(vcpu->kvm->arch.boot_selector);
+		vcpu->sregs.fs.selector	= vcpu->kvm->arch.boot_selector;
+		vcpu->sregs.fs.base	= selector_to_base(vcpu->kvm->arch.boot_selector);
+		vcpu->sregs.gs.selector	= vcpu->kvm->arch.boot_selector;
+		vcpu->sregs.gs.base	= selector_to_base(vcpu->kvm->arch.boot_selector);
+	}
 
 	if (ioctl(vcpu->vcpu_fd, KVM_SET_SREGS, &vcpu->sregs) < 0)
 		die_perror("KVM_SET_SREGS failed");

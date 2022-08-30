@@ -67,4 +67,9 @@ struct kvm_config {
 	bool virtio_legacy;
 };
 
+#define ZEROPAGE_OFFSET		0x1000
+
+extern bool load_vmlinux;
+extern uint64_t cr3;
+
 #endif

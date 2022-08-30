@@ -6,6 +6,7 @@
 #include "kvm/util.h"
 #include "kvm/8250-serial.h"
 #include "kvm/virtio-console.h"
+#include "kvm/e820.h"
 
 #include <asm/bootparam.h>
 #include <linux/kvm.h>
@@ -21,6 +22,9 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
+
+bool load_vmlinux;
+uint64_t cr3;
 
 struct kvm_ext kvm_req_ext[] = {
 	{ DEFINE_KVM_EXT(KVM_CAP_COALESCED_MMIO) },
@@ -193,9 +197,11 @@ void kvm__arch_delete_ram(struct kvm *kvm)
 #define BOOT_LOADER_IP		0x0000
 #define BOOT_LOADER_SP		0x8000
 #define BOOT_CMDLINE_OFFSET	0x20000
+#define COMMAND_LINE_SIZE	2048
 
 #define BOOT_PROTOCOL_REQUIRED	0x206
 #define LOAD_HIGH		0x01
+
 
 static inline void *guest_real_to_host(struct kvm *kvm, u16 selector, u16 offset)
 {
@@ -204,21 +210,56 @@ static inline void *guest_real_to_host(struct kvm *kvm, u16 selector, u16 offset
 	return guest_flat_to_host(kvm, flat);
 }
 
-static bool load_flat_binary(struct kvm *kvm, int fd_kernel)
+static void boot_params_set_e820(struct kvm *kvm, struct boot_params *boot)
+{
+	struct e820map *e820 = guest_flat_to_host(kvm, E820_MAP_START);
+	struct e820entry *mem_map = e820->map;
+	unsigned int i;
+
+	boot->e820_entries = e820->nr_map;
+	for (i = 0; i < e820->nr_map; i++) {
+		boot->e820_table[i].addr = mem_map[i].addr;
+		boot->e820_table[i].size = mem_map[i].size;
+		boot->e820_table[i].type = mem_map[i].type;
+	}
+}
+
+static void set_boot_page_table(struct kvm *kvm)
+{
+}
+
+static bool load_flat_binary(struct kvm *kvm, int fd_kernel, int fd_initrd, const char *kernel_cmdline)
 {
 	void *p;
+	ssize_t file_size;
+	struct boot_params *boot = guest_flat_to_host(kvm, ZEROPAGE_OFFSET);
+	size_t cmdline_size;
+
+	cr3 = 0x1068000;
+	if (lseek(fd_initrd, cr3, SEEK_SET) < 0)
+		die_perror("lseek");
+	p = guest_flat_to_host(kvm, cr3);
+	file_size = read_file(fd_initrd, p, kvm->cfg.ram_size);
+	if (file_size < 0)
+		die_perror("pagetable read");
+
+	boot_params_set_e820(kvm, boot);
+	set_boot_page_table(kvm);
+
+	p = guest_flat_to_host(kvm, BOOT_CMDLINE_OFFSET);
+	cmdline_size = strlen(kernel_cmdline) + 1;
+	if (cmdline_size > COMMAND_LINE_SIZE - 1)
+		cmdline_size = COMMAND_LINE_SIZE - 1;
+	memset(p, 0, boot->hdr.cmdline_size);
+	memcpy(p, kernel_cmdline, cmdline_size - 1);
+	boot->hdr.cmd_line_ptr = BOOT_CMDLINE_OFFSET;
 
 	if (lseek(fd_kernel, 0, SEEK_SET) < 0)
 		die_perror("lseek");
-
-	p = guest_real_to_host(kvm, BOOT_LOADER_SELECTOR, BOOT_LOADER_IP);
-
-	if (read_file(fd_kernel, p, kvm->cfg.ram_size) < 0)
-		die_perror("read");
-
-	kvm->arch.boot_selector	= BOOT_LOADER_SELECTOR;
-	kvm->arch.boot_ip	= BOOT_LOADER_IP;
-	kvm->arch.boot_sp	= BOOT_LOADER_SP;
+	p = guest_flat_to_host(kvm, 0x200000);
+	file_size = read_file(fd_kernel, p, kvm->cfg.ram_size - 0x200000);
+	if (file_size < 0)
+		die_perror("kernel read");
 
 	return true;
 }
@@ -343,7 +384,8 @@ bool kvm__arch_load_kernel_image(struct kvm *kvm, int fd_kernel, int fd_initrd,
 	if (fd_initrd != -1)
 		pr_warning("Loading initrd with flat binary not supported.");
 
-	return load_flat_binary(kvm, fd_kernel);
+	load_vmlinux = true;
+	return load_flat_binary(kvm, fd_kernel, fd_initrd, kernel_cmdline);
 }
 
 /**

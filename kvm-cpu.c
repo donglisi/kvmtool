@@ -15,6 +15,8 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include <termios.h>
+#include <unistd.h>
 
 extern __thread struct kvm_cpu *current_kvm_cpu;
 
@@ -125,9 +127,25 @@ void kvm_cpu__run_on_all_cpus(struct kvm *kvm, struct kvm_cpu_task *task)
 	mutex_unlock(&task_lock);
 }
 
+int mygetch(void);
+int mygetch(void)
+{
+	int ch;
+	struct termios oldt, newt;
+
+	tcgetattr ( STDIN_FILENO, &oldt );
+	newt = oldt;
+	newt.c_lflag &= ~( ICANON | ECHO );
+	tcsetattr ( STDIN_FILENO, TCSANOW, &newt );
+	ch = getchar();
+	tcsetattr ( STDIN_FILENO, TCSANOW, &oldt );
+	return ch;
+}
+
 int kvm_cpu__start(struct kvm_cpu *cpu)
 {
 	sigset_t sigset;
+	int hlt_count = 0;
 
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGALRM);
@@ -155,6 +173,9 @@ int kvm_cpu__start(struct kvm_cpu *cpu)
 		kvm_cpu__run(cpu);
 
 		switch (cpu->kvm_run->exit_reason) {
+		case KVM_EXIT_HLT:
+			printf("------------------------------hlt %d---------------------------------\n", hlt_count++);
+			mygetch();
 		case KVM_EXIT_UNKNOWN:
 			break;
 		case KVM_EXIT_DEBUG:

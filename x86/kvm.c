@@ -170,11 +170,18 @@ void kvm__arch_init(struct kvm *kvm)
 	if (kvm->ram_start == MAP_FAILED)
 		die("out of memory");
 
+	printf("kvm->ram_start %llu\n", (long long unsigned int)kvm->ram_start);
+	if (ram_size > 1024 * 1024 * 32)
+		memset(kvm->ram_start, 0, 1024 * 1024 * 32);
+	else
+		memset(kvm->ram_start, 0, ram_size);
 	madvise(kvm->ram_start, kvm->ram_size, MADV_MERGEABLE);
 
-	ret = ioctl(kvm->vm_fd, KVM_CREATE_IRQCHIP);
-	if (ret < 0)
-		die_perror("KVM_CREATE_IRQCHIP ioctl");
+	if (!do_debug_print) {
+		ret = ioctl(kvm->vm_fd, KVM_CREATE_IRQCHIP);
+		if (ret < 0)
+			die_perror("KVM_CREATE_IRQCHIP ioctl");
+	}
 }
 
 void kvm__arch_delete_ram(struct kvm *kvm)

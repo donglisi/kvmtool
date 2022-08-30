@@ -117,8 +117,10 @@ struct kvm_cpu *kvm_cpu__arch_init(struct kvm *kvm, unsigned long cpu_id)
 	if (coalesced_offset)
 		vcpu->ring = (void *)vcpu->kvm_run + (coalesced_offset * PAGE_SIZE);
 
-	if (kvm_cpu__set_lint(vcpu))
-		die_perror("KVM_SET_LAPIC failed");
+	if (!do_debug_print) {
+		if (kvm_cpu__set_lint(vcpu))
+			die_perror("KVM_SET_LAPIC failed");
+	}
 
 	vcpu->is_running = true;
 

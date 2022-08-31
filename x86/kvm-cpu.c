@@ -3,6 +3,7 @@
 #include "kvm/symbol.h"
 #include "kvm/util.h"
 #include "kvm/kvm.h"
+#include "kvm/boot-protocol.h"
 
 #include <asm/apicdef.h>
 #include <linux/err.h>
@@ -197,7 +198,7 @@ static void kvm_cpu__setup_regs(struct kvm_cpu *vcpu)
 {
 	if(load_vmlinux) {
 		vcpu->regs = (struct kvm_regs) {
-			.rip	= 0x0000000000200000ULL,
+			.rip	= VMLINUX_KERNEL_START,
 			.rsi 	= ZEROPAGE_OFFSET,
 		};
 	} else {

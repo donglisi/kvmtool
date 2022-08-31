@@ -198,7 +198,6 @@ void kvm__arch_delete_ram(struct kvm *kvm)
 #define BOOT_LOADER_SP		0x8000
 #define BOOT_CMDLINE_OFFSET	0x20000
 #define COMMAND_LINE_SIZE	2048
-#define VMLINUX_KERNEL_START	0x200000
 
 #define BOOT_PROTOCOL_REQUIRED	0x206
 #define LOAD_HIGH		0x01

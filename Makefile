@@ -7,7 +7,7 @@ OBJS += $(addprefix disk/, core.o raw.o)
 OBJS += $(addprefix hw/, serial.o rtc.o)
 OBJS += $(addprefix virtio/, blk.o core.o pci.o pci-modern.o console.o)
 OBJS += $(addprefix util/, init.o threadpool.o parse-options.o iovec.o rbtree.o rbtree-interval.o strbuf.o read-write.o util.o)
-OBJS += $(addprefix x86/, cpuid.o interrupt.o kvm.o kvm-cpu.o bios.o bios/bios-rom.o)
+OBJS += $(addprefix x86/, cpuid.o interrupt.o kvm.o kvm-cpu.o bios.o irq.o bios/bios-rom.o)
 OBJS := $(addprefix $(BUILD)/, $(OBJS))
 
 $(shell mkdir -p $(BUILD)/{x86/bios,util,disk,virtio,hw})

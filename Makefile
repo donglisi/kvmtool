@@ -1,5 +1,5 @@
 CC	:= gcc
-CFLAGS	:= -Iinclude -Ix86/include -D_GNU_SOURCE -DKVMTOOLS_VERSION='"1.0"' -DBUILD_ARCH='"x86"' -g
+CFLAGS	:= -nostdinc -I/usr/x86_64-linux-musl/include -Iinclude -Ix86/include -D_GNU_SOURCE -DKVMTOOLS_VERSION='"1.0"' -DBUILD_ARCH='"x86"' -g
 BUILD	:= build
 
 OBJS := devices.o irq.o kvm-cpu.o kvm.o kvm-ipc.o main.o builtin-debug.o builtin-run.o kvm-cmd.o mmio.o pci.o term.o
@@ -13,26 +13,40 @@ OBJS := $(addprefix $(BUILD)/, $(OBJS))
 $(shell mkdir -p $(BUILD)/{x86/bios,util,disk,virtio,hw})
 
 $(BUILD)/%.o: %.c
-	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) $< -o $@
+	@echo "  CC     " $@
+	@ $(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) $< -o $@
 
 $(BUILD)/%.o: %.S
-	$(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) $< -o $@
+	@echo "  AS     " $@
+	@ $(CC) -c $(CFLAGS) $(EXTRA_CFLAGS) $< -o $@
 
-all: $(OBJS)
-	$(CC) $^ -o lkvm
-	sudo setcap cap_net_admin+ep lkvm
+all: lkvm lkvm-s
+
+lkvm: $(OBJS)
+	@echo "  LD     " $@
+	@ ld -nostdlib -L/usr/x86_64-linux-musl/lib64 -lc -lpthread -rpath /usr/x86_64-linux-musl/lib64/ \
+		-dynamic-linker /lib/ld-musl-x86_64.so.1 /usr/x86_64-linux-musl/lib64/crt1.o $^ -o $@
+	@ sudo setcap cap_net_admin+ep $@
+
+lkvm-s: $(OBJS)
+	@echo "  LD     " $@
+	@ ld /usr/x86_64-linux-musl/lib64/crt1.o $^ /usr/x86_64-linux-musl/lib64/libc.a -o $@
+	@ sudo setcap cap_net_admin+ep $@
 
 BIOS := $(addprefix $(BUILD)/x86/bios/, e820.o int15.o entry.o)
 $(BIOS): EXTRA_CFLAGS := -m16
 
 x86/bios/bios.bin.elf: $(BIOS)
-	ld -T x86/bios/rom.ld.S -o $@ $^
+	@echo "  LD     " $@
+	@ ld -T x86/bios/rom.ld.S -o $@ $^
 
 x86/bios/bios.bin: x86/bios/bios.bin.elf
-	objcopy -O binary -j .text $< $@
+	@echo "  OBJCOPY" $@
+	@ objcopy -O binary -j .text $< $@
 
 x86/bios/bios-rom.h: x86/bios/bios.bin.elf
-	cd x86/bios && sh gen-offsets.sh > bios-rom.h
+	@echo "  NM     " $@
+	@ cd x86/bios && sh gen-offsets.sh > bios-rom.h
 
 $(BUILD)/x86/bios.o: x86/bios/bios.bin x86/bios/bios-rom.h
 

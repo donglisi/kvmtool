@@ -149,6 +149,7 @@ void kvm__arch_init(struct kvm *kvm)
 	struct kvm_pit_config pit_config = { .flags = 0, };
 	u64 ram_size = kvm->cfg.ram_size;
 	int ret;
+	FILE *fp;
 
 	ret = ioctl(kvm->vm_fd, KVM_SET_TSS_ADDR, 0xfffbd000);
 	if (ret < 0)
@@ -175,6 +176,11 @@ void kvm__arch_init(struct kvm *kvm)
 		die("out of memory");
 
 	printf("kvm->ram_start %llu\n", (long long unsigned int)kvm->ram_start);
+
+	fp = fopen("/tmp/kvm_ram_start", "w");
+	fprintf(fp, "%llu", kvm->ram_start);
+	fclose(fp);
+
 	if (ram_size > 1024 * 1024 * 32)
 		memset(kvm->ram_start, 0, 1024 * 1024 * 32);
 	else
@@ -228,20 +234,23 @@ static void set_boot_page_table(struct kvm *kvm)
 {
 }
 
-static bool load_flat_binary(struct kvm *kvm, int fd_kernel, int fd_initrd, const char *kernel_cmdline)
+static bool load_flat_binary(struct kvm *kvm, int fd_kernel, const char *kernel_cmdline)
 {
 	void *p;
 	ssize_t file_size;
 	struct boot_params *boot = guest_flat_to_host(kvm, ZEROPAGE_OFFSET);
 	size_t cmdline_size;
+	int fd;
 
-	cr3 = 0x1068000;
-	if (lseek(fd_initrd, cr3, SEEK_SET) < 0)
+	cr3 = 0x0b68000;
+	fd = open("/home/d/test/mem", O_RDONLY, 0);
+	if (lseek(fd, cr3, SEEK_SET) < 0)
 		die_perror("lseek");
 	p = guest_flat_to_host(kvm, cr3);
-	file_size = read_file(fd_initrd, p, kvm->cfg.ram_size - cr3);
+	file_size = read_file(fd, p, kvm->cfg.ram_size - cr3);
 	if (file_size < 0)
 		die_perror("pagetable read");
+	close(fd);
 
 	boot_params_set_e820(kvm, boot);
 	set_boot_page_table(kvm);
@@ -378,14 +387,8 @@ bool kvm__arch_load_kernel_image(struct kvm *kvm, int fd_kernel, int fd_initrd,
 {
 	if (load_bzimage(kvm, fd_kernel, fd_initrd, kernel_cmdline))
 		return true;
-	pr_warning("Kernel image is not a bzImage.");
-	pr_warning("Trying to load it as a flat binary (no cmdline support)");
-
-	if (fd_initrd != -1)
-		pr_warning("Loading initrd with flat binary not supported.");
-
 	load_vmlinux = true;
-	return load_flat_binary(kvm, fd_kernel, fd_initrd, kernel_cmdline);
+	return load_flat_binary(kvm, fd_kernel, kernel_cmdline);
 }
 
 /**

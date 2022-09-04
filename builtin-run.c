@@ -734,18 +734,6 @@ static struct kvm *kvm_cmd_run_init(int argc, const char **argv)
 	else
 		kvm_run_set_real_cmdline(kvm);
 
-	if (kvm->cfg.kernel_filename) {
-		printf("  # %s run -k %s -m %Lu -c %d --name %s\n", KVM_BINARY_NAME,
-		       kvm->cfg.kernel_filename,
-		       (unsigned long long)kvm->cfg.ram_size >> MB_SHIFT,
-		       kvm->cfg.nrcpus, kvm->cfg.guest_name);
-	} else if (kvm->cfg.firmware_filename) {
-		printf("  # %s run --firmware %s -m %Lu -c %d --name %s\n", KVM_BINARY_NAME,
-		       kvm->cfg.firmware_filename,
-		       (unsigned long long)kvm->cfg.ram_size >> MB_SHIFT,
-		       kvm->cfg.nrcpus, kvm->cfg.guest_name);
-	}
-
 	if (init_list__init(kvm) < 0)
 		die ("Initialisation failed");
 

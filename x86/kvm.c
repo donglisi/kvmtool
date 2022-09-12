@@ -24,7 +24,7 @@
 #include <fcntl.h>
 
 bool load_vmlinux;
-uint64_t cr3;
+uint64_t cr3 = 16752640;
 
 struct kvm_ext kvm_req_ext[] = {
 	{ DEFINE_KVM_EXT(KVM_CAP_COALESCED_MMIO) },
@@ -232,6 +232,24 @@ static void boot_params_set_e820(struct kvm *kvm, struct boot_params *boot)
 
 static void set_boot_page_table(struct kvm *kvm)
 {
+	int i;
+	unsigned int *addr;
+
+	/* Build Level 4 */
+	addr = guest_flat_to_host(kvm, cr3);
+	*addr = cr3 + 0x1007;
+
+	/* Build Level 3 */
+	for (i = 0; i < 4; i++) {
+		addr = guest_flat_to_host(kvm, cr3 + 0x1000 + i * 8);
+		*addr = cr3 + 0x2007 + i * 0x1000;
+	}
+
+	/* Build Level 2 */
+	for (i = 0; i < 2048; i++) {
+		addr = guest_flat_to_host(kvm, cr3 + 0x2000 + i * 8);
+		*addr = 0x183 + 0x200000 * i;
+	}
 }
 
 static bool load_flat_binary(struct kvm *kvm, int fd_kernel, const char *kernel_cmdline)
@@ -241,16 +259,6 @@ static bool load_flat_binary(struct kvm *kvm, int fd_kernel, const char *kernel_
 	struct boot_params *boot = guest_flat_to_host(kvm, ZEROPAGE_OFFSET);
 	size_t cmdline_size;
 	int fd;
-
-	cr3 = 0x0b68000;
-	fd = open("/home/d/test/mem", O_RDONLY, 0);
-	if (lseek(fd, cr3, SEEK_SET) < 0)
-		die_perror("lseek");
-	p = guest_flat_to_host(kvm, cr3);
-	file_size = read_file(fd, p, kvm->cfg.ram_size - cr3);
-	if (file_size < 0)
-		die_perror("pagetable read");
-	close(fd);
 
 	boot_params_set_e820(kvm, boot);
 	set_boot_page_table(kvm);

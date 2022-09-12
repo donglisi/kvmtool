@@ -24,7 +24,7 @@
 #include <fcntl.h>
 
 bool load_vmlinux;
-uint64_t cr3 = 16752640;
+uint64_t cr3 = 0xffa000;
 
 struct kvm_ext kvm_req_ext[] = {
 	{ DEFINE_KVM_EXT(KVM_CAP_COALESCED_MMIO) },

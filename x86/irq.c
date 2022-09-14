@@ -36,6 +36,9 @@ int irq__init(struct kvm *kvm)
 {
 	int i, r;
 
+	if (do_debug_print)
+		return 0;
+
 	/* Hook first 8 GSIs to master IRQCHIP */
 	for (i = 0; i < 8; i++)
 		if (i != 2)

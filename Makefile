@@ -1,6 +1,7 @@
 CC	:= gcc
-CFLAGS	:= -nostdinc -I/usr/x86_64-linux-musl/include -Iinclude -Ix86/include -D_GNU_SOURCE -DKVMTOOLS_VERSION='"1.0"' -DBUILD_ARCH='"x86"' -g
 BUILD	:= build
+
+$(shell mkdir -p $(BUILD)/{x86/bios,util,disk,virtio,hw})
 
 OBJS := devices.o irq.o kvm-cpu.o kvm.o kvm-ipc.o main.o builtin-debug.o builtin-run.o kvm-cmd.o mmio.o pci.o term.o
 OBJS += $(addprefix disk/, core.o raw.o)
@@ -10,7 +11,8 @@ OBJS += $(addprefix util/, init.o threadpool.o parse-options.o iovec.o rbtree.o 
 OBJS += $(addprefix x86/, cpuid.o interrupt.o kvm.o kvm-cpu.o bios.o irq.o bios/bios-rom.o)
 OBJS := $(addprefix $(BUILD)/, $(OBJS))
 
-$(shell mkdir -p $(BUILD)/{x86/bios,util,disk,virtio,hw})
+CFLAGS	= -nostdinc -I/usr/x86_64-linux-musl/include -Iinclude -Ix86/include -Wp,-MD,$(dir $@).$(notdir $@).d  -g \
+		-D_GNU_SOURCE -DKVMTOOLS_VERSION='"1.0"' -DBUILD_ARCH='"x86"'
 
 $(BUILD)/%.o: %.c
 	@echo "  CC     " $@
@@ -54,3 +56,5 @@ $(BUILD)/x86/bios/bios-rom.o: x86/bios/bios.bin
 
 clean:
 	rm -rf x86/bios/{bios.bin.elf,bios.bin,bios-rom.h} lkvm $(BUILD)
+
+-include $(foreach obj,$(OBJS),$(dir $(obj)).$(notdir $(obj)).d)
